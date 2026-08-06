@@ -1,20 +1,15 @@
 package postgresql
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
-	"sync"
 	"time"
 
-	"github.com/jonneyless/gbox/cache"
-	"github.com/jonneyless/gbox/logger"
-
 	"github.com/bytedance/sonic"
+	"github.com/jonneyless/gbox/cache"
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cast"
-	"go.uber.org/zap"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -23,14 +18,6 @@ import (
 const (
 	DefaultCacheTTL = time.Hour
 	MaxCacheTTL     = 24 * time.Hour
-)
-
-var (
-	ErrEmptyUpdates    = errors.New("updates cannot be empty")
-	ErrEmptyConditions = errors.New("conditions cannot be empty")
-	ErrEmptyModels     = errors.New("models cannot be empty")
-	ErrEmptyIDs        = errors.New("ids cannot be empty")
-	ErrNotFound        = errors.New("not found")
 )
 
 type BaseService[T any] struct {
@@ -119,9 +106,6 @@ func (srv *BaseService[T]) GetById(id int64) (*T, error) {
 
 	err := DB().Where("id = ?", id).First(&model).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("%w", ErrNotFound)
-		}
 		return nil, err
 	}
 
@@ -146,7 +130,7 @@ func (srv *BaseService[T]) GetWithCacheConfig(id int64, config CacheConfig) (*T,
 	data, err := srv.Rds().Get(cacheKey)
 	if err == nil && data != "" {
 		if data == "NULL" && config.EnableNil {
-			return nil, fmt.Errorf("%w", ErrNotFound)
+			return nil, gorm.ErrRecordNotFound
 		}
 
 		item := new(T)
@@ -165,7 +149,7 @@ func (srv *BaseService[T]) GetWithCacheConfig(id int64, config CacheConfig) (*T,
 		if config.EnableNil {
 			_ = srv.Rds().Set(cacheKey, "NULL", config.TTL)
 		}
-		return nil, fmt.Errorf("%w", ErrNotFound)
+		return nil, gorm.ErrRecordNotFound
 	}
 
 	cacheData, _ := sonic.Marshal(item)
@@ -179,7 +163,7 @@ func (srv *BaseService[T]) GetByField(field string, value any, opts ...QueryOpti
 
 func (srv *BaseService[T]) GetByCondition(conditions []Condition, opts ...QueryOption) (*T, error) {
 	if len(conditions) == 0 {
-		return nil, ErrEmptyConditions
+		return nil, fmt.Errorf("no conditions provided")
 	}
 
 	options := &QueryOptions{
@@ -222,9 +206,6 @@ func (srv *BaseService[T]) GetByCondition(conditions []Condition, opts ...QueryO
 
 	err := query.First(&model).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("%w", ErrNotFound)
-		}
 		return nil, err
 	}
 
@@ -249,7 +230,7 @@ func (srv *BaseService[T]) PluckInt64(column string, conditions []Condition) ([]
 
 func (srv *BaseService[T]) Find(conditions []Condition, opts ...QueryOption) ([]*T, error) {
 	if len(conditions) == 0 {
-		return nil, ErrEmptyConditions
+		return nil, fmt.Errorf("no conditions provided")
 	}
 
 	options := &QueryOptions{
@@ -319,7 +300,7 @@ func (srv *BaseService[T]) Create(model *T) error {
 
 func (srv *BaseService[T]) CreateBatch(models []*T, batchSize int) error {
 	if len(models) == 0 {
-		return ErrEmptyModels
+		return fmt.Errorf("no models provided")
 	}
 
 	if batchSize <= 0 || batchSize > 100 {
@@ -384,7 +365,7 @@ func (srv *BaseService[T]) UpdateField(id int64, field string, value any) error 
 
 func (srv *BaseService[T]) Update(id int64, updates map[string]any) error {
 	if len(updates) == 0 {
-		return ErrEmptyUpdates
+		return fmt.Errorf("no updates provided")
 	}
 
 	err := DB().Model(new(T)).Where("id = ?", id).Updates(updates).Error
@@ -410,7 +391,7 @@ func (srv *BaseService[T]) UpdateModel(id int64, model *T) error {
 
 func (srv *BaseService[T]) UpdateByCondition(conditions []Condition, updates map[string]any) (int64, error) {
 	if len(conditions) == 0 {
-		return 0, ErrEmptyConditions
+		return 0, fmt.Errorf("no conditions provided")
 	}
 
 	var ids []int64
@@ -486,7 +467,7 @@ func (srv *BaseService[T]) Delete(id int64) error {
 
 func (srv *BaseService[T]) DeleteBatch(ids []int64) error {
 	if len(ids) == 0 {
-		return ErrEmptyIDs
+		return fmt.Errorf("no ids provided")
 	}
 
 	err := DB().Delete(new(T), ids).Error
@@ -501,7 +482,7 @@ func (srv *BaseService[T]) DeleteBatch(ids []int64) error {
 
 func (srv *BaseService[T]) DeleteByCondition(conditions []Condition) (int64, error) {
 	if len(conditions) == 0 {
-		return 0, ErrEmptyConditions
+		return 0, fmt.Errorf("no conditions provided")
 	}
 
 	var ids []int64
@@ -581,7 +562,7 @@ func (srv *BaseService[T]) ExistsByCondition(conditions []Condition) (bool, erro
 
 func (srv *BaseService[T]) CountByCondition(conditions []Condition) (int64, error) {
 	if len(conditions) == 0 {
-		return 0, ErrEmptyConditions
+		return 0, fmt.Errorf("no conditions provided")
 	}
 
 	var count int64
@@ -716,150 +697,4 @@ func getIdValue(model any, fieldName string) int64 {
 	}
 
 	return 0
-}
-
-func IsNotFound(err error) bool {
-	return errors.Is(err, ErrNotFound) || errors.Is(err, gorm.ErrRecordNotFound)
-}
-
-type Memory[T any] struct {
-	data       T
-	hasData    bool // 标记是否有有效数据
-	expireTime time.Time
-	mu         sync.RWMutex
-	duration   time.Duration
-	fetchFunc  func() (T, error)
-	logger     *zap.SugaredLogger
-}
-
-func NewMemory[T any](duration time.Duration, fetchFunc func() (T, error)) *Memory[T] {
-	return &Memory[T]{
-		duration:  duration,
-		fetchFunc: fetchFunc,
-		hasData:   false,
-		logger:    logger.GetLogger(),
-	}
-}
-
-func (c *Memory[T]) Get() T {
-	c.mu.RLock()
-	if c.hasData && !c.isExpired() {
-		result := c.data
-		c.mu.RUnlock()
-		return result
-	}
-	c.mu.RUnlock()
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	// 双重检查
-	if c.hasData && !c.isExpired() {
-		return c.data
-	}
-
-	// 获取新数据
-	data, err := c.fetchFunc()
-	if err != nil {
-		if !errors.Is(err, ErrNotFound) {
-			if c.hasData {
-				c.expireTime = time.Now().Add(c.duration / 2)
-				if c.logger != nil {
-					c.logger.Errorf("refresh cache failed, using stale data: %v", err)
-				}
-			} else {
-				var zero T
-				c.data = zero
-				c.hasData = false
-				c.expireTime = time.Time{}
-				if c.logger != nil {
-					c.logger.Errorf("initial cache load failed: %w", err)
-				}
-			}
-			return c.data
-		}
-	}
-
-	// 验证数据有效性
-	if c.isValidData(data) {
-		c.data = data
-		c.hasData = true
-		c.expireTime = time.Now().Add(c.duration)
-	} else {
-		// 数据无效
-		if c.hasData {
-			c.expireTime = time.Now().Add(c.duration / 2)
-		} else {
-			var zero T
-			c.data = zero
-			c.hasData = false
-		}
-	}
-
-	return c.data
-}
-
-func (c *Memory[T]) ForceRefresh() error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	data, err := c.fetchFunc()
-	if err != nil {
-		return err
-	}
-
-	if c.isValidData(data) {
-		c.data = data
-		c.hasData = true
-		c.expireTime = time.Now().Add(c.duration)
-	}
-	return nil
-}
-
-func (c *Memory[T]) isExpired() bool {
-	return time.Now().After(c.expireTime)
-}
-
-func (c *Memory[T]) isValidData(data T) bool {
-	if c.isEmpty(data) {
-		return false
-	}
-	return true
-}
-
-// isEmpty 检查数据是否为空
-func (c *Memory[T]) isEmpty(data T) bool {
-	v := reflect.ValueOf(data)
-
-	// 如果是 nil 指针
-	if v.Kind() == reflect.Pointer && v.IsNil() {
-		return true
-	}
-
-	// 如果是 nil 接口
-	if v.Kind() == reflect.Interface && v.IsNil() {
-		return true
-	}
-
-	// 检查各种集合类型
-	switch v.Kind() {
-	case reflect.Map, reflect.Slice, reflect.Array:
-		return v.Len() == 0
-	case reflect.String:
-		return v.Len() == 0
-	case reflect.Struct:
-		return false
-	default:
-		zero := reflect.Zero(v.Type()).Interface()
-		return reflect.DeepEqual(data, zero)
-	}
-}
-
-func (c *Memory[T]) Clear() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	var zero T
-	c.data = zero
-	c.hasData = false
-	c.expireTime = time.Time{}
 }
