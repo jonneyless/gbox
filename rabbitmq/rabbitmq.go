@@ -3,10 +3,11 @@ package rabbitmq
 import (
 	"context"
 	"fmt"
-	"gbox/logger"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/jonneyless/gbox/logger"
 
 	"github.com/wagslane/go-rabbitmq"
 	"go.uber.org/zap"

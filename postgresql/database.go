@@ -2,8 +2,9 @@ package postgresql
 
 import (
 	"fmt"
-	"gbox/logger"
 	"time"
+
+	"github.com/jonneyless/gbox/logger"
 
 	"go.uber.org/zap"
 	"gorm.io/driver/postgres"

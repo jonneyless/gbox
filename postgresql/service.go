@@ -3,12 +3,13 @@ package postgresql
 import (
 	"errors"
 	"fmt"
-	"gbox/cache"
-	"gbox/logger"
 	"reflect"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/jonneyless/gbox/cache"
+	"github.com/jonneyless/gbox/logger"
 
 	"github.com/bytedance/sonic"
 	"github.com/shopspring/decimal"

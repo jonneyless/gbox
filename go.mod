@@ -1,4 +1,4 @@
-module gbox
+module github.com/jonneyless/gbox
 
 go 1.26.1
 
