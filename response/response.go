@@ -29,6 +29,14 @@ func Success(c echo.Context, data any) error {
 	})
 }
 
+// 自定义文本响应
+func Message(c echo.Context, message string) error {
+	return c.JSON(http.StatusOK, Response{
+		Code:    0,
+		Message: message,
+	})
+}
+
 // Ok 简单的成功响应
 func Ok(c echo.Context) error {
 	return c.JSON(http.StatusOK, Response{

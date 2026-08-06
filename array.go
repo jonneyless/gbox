@@ -1,6 +1,9 @@
 package gbox
 
-import "slices"
+import (
+	"cmp"
+	"slices"
+)
 
 func Union[T comparable](slice1, slice2 []T) []T {
 	m := make(map[T]bool)
@@ -110,4 +113,18 @@ func Chunk[T any](items []T, chunkSize int) [][]T {
 	}
 
 	return chunks
+}
+
+func SameArray[T cmp.Ordered](a, b []T) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	aCopy := slices.Clone(a)
+	bCopy := slices.Clone(b)
+
+	slices.Sort(aCopy)
+	slices.Sort(bCopy)
+
+	return slices.Equal(aCopy, bCopy)
 }
