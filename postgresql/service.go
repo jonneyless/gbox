@@ -637,6 +637,19 @@ func (srv *BaseService[T]) buildQueryCore(db *gorm.DB, conditions []Condition) *
 			query = query.Where(fmt.Sprintf("%s IS NULL", cond.Field))
 		case "IS NOT NULL":
 			query = query.Where(fmt.Sprintf("%s IS NOT NULL", cond.Field))
+		case "JSONB":
+			fields := strings.Split(cond.Field, ".")
+			if len(fields) == 1 {
+				query = query.Where(fmt.Sprintf("%s ? ?", cond.Field), cond.Value)
+			}
+			if len(fields) == 2 {
+				query = query.Where(fmt.Sprintf("%s ? ?", cond.Field), fields[1])
+				query = query.Where(fmt.Sprintf("%s -> ? = ?", fields[0]), fields[1], cond.Value)
+			}
+			if len(fields) == 3 {
+				query = query.Where(fmt.Sprintf("%s ? ?", cond.Field), fields[1])
+				query = query.Where(fmt.Sprintf("%s -> ? ->> ? = ?", fields[0]), fields[1], fields[2], cond.Value)
+			}
 		default:
 			query = query.Where(fmt.Sprintf("%s = ?", cond.Field), cond.Value)
 		}
