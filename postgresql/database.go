@@ -45,6 +45,7 @@ func InitDatabase(c *DatabaseParams) {
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s search_path=%s port=%d sslmode=%s TimeZone=%s",
 		c.Host, c.Username, c.Password, c.Database, c.Scheme, c.Port, c.SSLMode, c.TimeZone)
 
+	logger.GetLogger().Debugln(dsn)
 	database = &Database{dsn: dsn, logLevel: c.LogLevel, logger: logger.GetLogger()}
 }
 

@@ -640,15 +640,15 @@ func (srv *BaseService[T]) buildQueryCore(db *gorm.DB, conditions []Condition) *
 		case "JSONB":
 			fields := strings.Split(cond.Field, ".")
 			if len(fields) == 1 {
-				query = query.Where(fmt.Sprintf("%s ? ?", cond.Field), cond.Value)
+				query = query.Where(fmt.Sprintf("%s ? '%s'", cond.Field, cast.ToString(cond.Value)))
 			}
 			if len(fields) == 2 {
-				query = query.Where(fmt.Sprintf("%s ? ?", cond.Field), fields[1])
-				query = query.Where(fmt.Sprintf("%s -> ? = ?", fields[0]), fields[1], cond.Value)
+				query = query.Where(fmt.Sprintf("%s ? '%s'", cond.Field, cast.ToString(fields[1])))
+				query = query.Where(fmt.Sprintf("%s -> '%s' = ?", fields[0], cast.ToString(fields[1])), cond.Value)
 			}
 			if len(fields) == 3 {
-				query = query.Where(fmt.Sprintf("%s ? ?", cond.Field), fields[1])
-				query = query.Where(fmt.Sprintf("%s -> ? ->> ? = ?", fields[0]), fields[1], fields[2], cond.Value)
+				query = query.Where(fmt.Sprintf("%s ? '%s'", cond.Field, fields[1]))
+				query = query.Where(fmt.Sprintf("%s -> '%s' ->> '%s' = ?", fields[0], cast.ToString(fields[1]), cast.ToString(fields[2])), cond.Value)
 			}
 		default:
 			query = query.Where(fmt.Sprintf("%s = ?", cond.Field), cond.Value)
