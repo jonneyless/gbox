@@ -527,21 +527,12 @@ func InitRabbit(params *RabbitParams) {
 	InitRabbitWithConfig(params, DefaultPoolConfig())
 }
 
-func buildAMQPURL(username, password, host string, port int, vhost string) string {
-	u := url.URL{
-		Scheme: "amqp",
-		Host:   fmt.Sprintf("%s:%d", host, port),
-		User:   url.UserPassword(username, password),
-		Path:   vhost,
-	}
-	return u.String()
-}
-
 func InitRabbitWithConfig(params *RabbitParams, config *PoolConfig) {
 	rabbitOnce.Do(func() {
-		dsn := buildAMQPURL(
+		dsn := fmt.Sprintf(
+			"amqp://%s:%s@%s:%d/%s",
 			params.Username,
-			params.Password,
+			url.QueryEscape(params.Password),
 			params.Host,
 			params.Port,
 			params.VirtualHost,
