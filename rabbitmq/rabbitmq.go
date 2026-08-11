@@ -3,6 +3,7 @@ package rabbitmq
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -526,10 +527,19 @@ func InitRabbit(params *RabbitParams) {
 	InitRabbitWithConfig(params, DefaultPoolConfig())
 }
 
+func buildAMQPURL(username, password, host string, port int, vhost string) string {
+	u := url.URL{
+		Scheme: "amqp",
+		Host:   fmt.Sprintf("%s:%d", host, port),
+		User:   url.UserPassword(username, password),
+		Path:   vhost,
+	}
+	return u.String()
+}
+
 func InitRabbitWithConfig(params *RabbitParams, config *PoolConfig) {
 	rabbitOnce.Do(func() {
-		dsn := fmt.Sprintf(
-			"amqp://%s:%s@%s:%d/%s",
+		dsn := buildAMQPURL(
 			params.Username,
 			params.Password,
 			params.Host,
