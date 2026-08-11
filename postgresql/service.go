@@ -303,8 +303,8 @@ func (srv *BaseService[T]) CreateBatch(models []*T, batchSize int) error {
 		return fmt.Errorf("no models provided")
 	}
 
-	if batchSize <= 0 || batchSize > 100 {
-		batchSize = 100
+	if batchSize <= 0 {
+		return fmt.Errorf("batch size must be greater than zero")
 	}
 
 	err := DB().CreateInBatches(models, batchSize).Error
