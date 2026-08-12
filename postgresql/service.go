@@ -99,7 +99,9 @@ func (srv *BaseService[T]) Rds() *cache.Redis {
 }
 
 func (srv *BaseService[T]) ReadOnly() *BaseService[T] {
-	srv.readOnly = true
+	if DBRead() != nil {
+		srv.readOnly = true
+	}
 	return srv
 }
 
