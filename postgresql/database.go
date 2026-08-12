@@ -22,15 +22,17 @@ func DB() *gorm.DB {
 }
 
 type DatabaseParams struct {
-	Host     string
-	Port     int
-	Username string
-	Password string
-	Database string
-	Scheme   string
-	LogLevel string
-	SSLMode  string
-	TimeZone string
+	Host         string
+	Port         int
+	Username     string
+	Password     string
+	Database     string
+	Scheme       string
+	LogLevel     string
+	SSLMode      string
+	TimeZone     string
+	MaxOpenConns int
+	MaxIdleConns int
 }
 
 func InitDatabase(c *DatabaseParams) {
@@ -45,14 +47,22 @@ func InitDatabase(c *DatabaseParams) {
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s search_path=\"%s\" port=%d sslmode=%s TimeZone=%s",
 		c.Host, c.Username, c.Password, c.Database, c.Scheme, c.Port, c.SSLMode, c.TimeZone)
 
-	database = &Database{dsn: dsn, logLevel: c.LogLevel, logger: logger.GetLogger()}
+	database = &Database{
+		dsn:          dsn,
+		maxOpenConns: c.MaxOpenConns,
+		maxIdleConns: c.MaxIdleConns,
+		logLevel:     c.LogLevel,
+		logger:       logger.GetLogger(),
+	}
 }
 
 type Database struct {
-	dsn      string
-	db       *gorm.DB
-	logLevel string
-	logger   *zap.SugaredLogger
+	dsn          string
+	db           *gorm.DB
+	maxOpenConns int
+	maxIdleConns int
+	logLevel     string
+	logger       *zap.SugaredLogger
 }
 
 func (d *Database) Connect() *gorm.DB {
@@ -67,10 +77,10 @@ func (d *Database) Connect() *gorm.DB {
 	}
 
 	sqlDB, _ := d.db.DB()
-	sqlDB.SetMaxOpenConns(100)
-	sqlDB.SetMaxIdleConns(5)
-	sqlDB.SetConnMaxLifetime(time.Hour)
-	sqlDB.SetConnMaxIdleTime(time.Hour)
+	sqlDB.SetMaxOpenConns(max(d.maxOpenConns, 5))
+	sqlDB.SetMaxIdleConns(max(d.maxIdleConns, 2))
+	sqlDB.SetConnMaxLifetime(30 * time.Minute)
+	sqlDB.SetConnMaxIdleTime(10 * time.Minute)
 
 	return d.db
 }
