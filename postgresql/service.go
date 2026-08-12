@@ -23,6 +23,7 @@ const (
 type BaseService[T any] struct {
 	Prefix    string
 	TableName string
+	readOnly  bool
 	cache     *cache.Redis
 }
 
@@ -45,7 +46,6 @@ type QueryOptions struct {
 	Select     []string
 	Page       int
 	PageSize   int
-	ReadOnly   bool
 }
 
 type QueryOption func(*QueryOptions)
@@ -53,12 +53,6 @@ type QueryOption func(*QueryOptions)
 type QueryOrder struct {
 	OrderBy    string
 	Descending bool
-}
-
-func WithReadOnly() QueryOption {
-	return func(o *QueryOptions) {
-		o.ReadOnly = true
-	}
 }
 
 func WithOrder(orderBy string, descending bool) QueryOption {
@@ -104,6 +98,20 @@ func (srv *BaseService[T]) Rds() *cache.Redis {
 	return srv.cache
 }
 
+func (srv *BaseService[T]) ReadOnly() *BaseService[T] {
+	srv.readOnly = true
+	return srv
+}
+
+func (srv *BaseService[T]) getDB() *gorm.DB {
+	if srv.readOnly {
+		srv.readOnly = false
+		return DBRead()
+	}
+
+	return DB()
+}
+
 func (srv *BaseService[T]) WithTransaction(fn func(tx *gorm.DB) error) error {
 	return DB().Transaction(fn)
 }
@@ -111,7 +119,7 @@ func (srv *BaseService[T]) WithTransaction(fn func(tx *gorm.DB) error) error {
 func (srv *BaseService[T]) GetById(id int64) (*T, error) {
 	var model *T
 
-	err := DB().Where("id = ?", id).First(&model).Error
+	err := srv.getDB().Where("id = ?", id).First(&model).Error
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +188,6 @@ func (srv *BaseService[T]) GetByCondition(conditions []Condition, opts ...QueryO
 		Select:   []string{},
 		Preload:  "",
 		Joins:    "",
-		ReadOnly: false,
 	}
 	for _, opt := range opts {
 		opt(options)
@@ -188,12 +195,7 @@ func (srv *BaseService[T]) GetByCondition(conditions []Condition, opts ...QueryO
 
 	var model *T
 
-	var query *gorm.DB
-	if options.ReadOnly && DBRead() != nil {
-		query = srv.buildQueryReadOnly(conditions)
-	} else {
-		query = srv.buildQuery(conditions)
-	}
+	query := srv.buildQuery(conditions)
 
 	if options.Preload != "" {
 		query = query.Preload(options.Preload, options.PreloadOpt...)
@@ -258,12 +260,7 @@ func (srv *BaseService[T]) Find(conditions []Condition, opts ...QueryOption) ([]
 		opt(options)
 	}
 
-	var query *gorm.DB
-	if options.ReadOnly && DBRead() != nil {
-		query = srv.buildQueryReadOnly(conditions)
-	} else {
-		query = srv.buildQuery(conditions)
-	}
+	query := srv.buildQuery(conditions)
 
 	if options.Preload != "" {
 		query = query.Preload(options.Preload, options.PreloadOpt...)
@@ -303,7 +300,7 @@ func (srv *BaseService[T]) Find(conditions []Condition, opts ...QueryOption) ([]
 
 func (srv *BaseService[T]) FindAll() ([]*T, error) {
 	var models []*T
-	err := DB().Model(new(T)).Find(&models).Error
+	err := srv.getDB().Model(new(T)).Find(&models).Error
 	return models, err
 }
 
@@ -677,11 +674,7 @@ func (srv *BaseService[T]) buildQueryCore(db *gorm.DB, conditions []Condition) *
 }
 
 func (srv *BaseService[T]) buildQuery(conditions []Condition) *gorm.DB {
-	return srv.buildQueryCore(DB(), conditions)
-}
-
-func (srv *BaseService[T]) buildQueryReadOnly(conditions []Condition) *gorm.DB {
-	return srv.buildQueryCore(DBRead(), conditions)
+	return srv.buildQueryCore(srv.getDB(), conditions)
 }
 
 func (srv *BaseService[T]) buildQueryWithTx(tx *gorm.DB, conditions []Condition) *gorm.DB {
