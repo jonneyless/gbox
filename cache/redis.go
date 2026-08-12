@@ -51,8 +51,9 @@ type Redis struct {
 }
 
 type RedisPipeline struct {
-	ctx  context.Context
-	pipe redis.Pipeliner
+	ctx    context.Context
+	prefix string
+	pipe   redis.Pipeliner
 }
 
 func (r *Redis) SetContext(ctx context.Context) {
@@ -93,19 +94,19 @@ func (r *Redis) GetKey(key string) string {
 }
 
 func (r *Redis) Set(key string, value any, expiration time.Duration) error {
-	return r.client.Set(r.ctx, key, value, expiration).Err()
+	return r.client.Set(r.ctx, r.GetKey(key), value, expiration).Err()
 }
 
 func (r *Redis) SetNX(key string, value any, expiration time.Duration) bool {
-	return r.client.SetNX(r.ctx, key, value, expiration).Val()
+	return r.client.SetNX(r.ctx, r.GetKey(key), value, expiration).Val()
 }
 
 func (r *Redis) Get(key string) (string, error) {
-	return r.client.Get(r.ctx, key).Result()
+	return r.client.Get(r.ctx, r.GetKey(key)).Result()
 }
 
 func (r *Redis) Del(key string) error {
-	return r.client.Del(r.ctx, key).Err()
+	return r.client.Del(r.ctx, r.GetKey(key)).Err()
 }
 
 func (r *Redis) RPush(key string, value any) error {
@@ -224,13 +225,18 @@ func (r *Redis) ForceReleaseLock(key string) error {
 
 func (r *Redis) Pipeline() RedisPipeline {
 	return RedisPipeline{
-		ctx:  r.ctx,
-		pipe: r.client.Pipeline(),
+		ctx:    r.ctx,
+		prefix: r.prefix,
+		pipe:   r.client.Pipeline(),
 	}
 }
 
+func (p *RedisPipeline) GetKey(key string) string {
+	return fmt.Sprintf("%s:%s", p.prefix, key)
+}
+
 func (p *RedisPipeline) Del(key string) *redis.IntCmd {
-	return p.pipe.Del(p.ctx, key)
+	return p.pipe.Del(p.ctx, p.GetKey(key))
 }
 
 func (p *RedisPipeline) Exec() ([]redis.Cmder, error) {
