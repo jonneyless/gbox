@@ -45,6 +45,7 @@ type QueryOptions struct {
 	Select     []string
 	Page       int
 	PageSize   int
+	ReadOnly   bool
 }
 
 type QueryOption func(*QueryOptions)
@@ -52,6 +53,12 @@ type QueryOption func(*QueryOptions)
 type QueryOrder struct {
 	OrderBy    string
 	Descending bool
+}
+
+func WithReadOnly() QueryOption {
+	return func(o *QueryOptions) {
+		o.ReadOnly = true
+	}
 }
 
 func WithOrder(orderBy string, descending bool) QueryOption {
@@ -173,6 +180,7 @@ func (srv *BaseService[T]) GetByCondition(conditions []Condition, opts ...QueryO
 		Select:   []string{},
 		Preload:  "",
 		Joins:    "",
+		ReadOnly: false,
 	}
 	for _, opt := range opts {
 		opt(options)
@@ -180,7 +188,12 @@ func (srv *BaseService[T]) GetByCondition(conditions []Condition, opts ...QueryO
 
 	var model *T
 
-	query := srv.buildQuery(conditions)
+	var query *gorm.DB
+	if options.ReadOnly && DBRead() != nil {
+		query = srv.buildQueryReadOnly(conditions)
+	} else {
+		query = srv.buildQuery(conditions)
+	}
 
 	if options.Preload != "" {
 		query = query.Preload(options.Preload, options.PreloadOpt...)
@@ -660,6 +673,10 @@ func (srv *BaseService[T]) buildQueryCore(db *gorm.DB, conditions []Condition) *
 
 func (srv *BaseService[T]) buildQuery(conditions []Condition) *gorm.DB {
 	return srv.buildQueryCore(DB(), conditions)
+}
+
+func (srv *BaseService[T]) buildQueryReadOnly(conditions []Condition) *gorm.DB {
+	return srv.buildQueryCore(DBRead(), conditions)
 }
 
 func (srv *BaseService[T]) buildQueryWithTx(tx *gorm.DB, conditions []Condition) *gorm.DB {
