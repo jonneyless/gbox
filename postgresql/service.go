@@ -258,7 +258,12 @@ func (srv *BaseService[T]) Find(conditions []Condition, opts ...QueryOption) ([]
 		opt(options)
 	}
 
-	query := srv.buildQuery(conditions)
+	var query *gorm.DB
+	if options.ReadOnly && DBRead() != nil {
+		query = srv.buildQueryReadOnly(conditions)
+	} else {
+		query = srv.buildQuery(conditions)
+	}
 
 	if options.Preload != "" {
 		query = query.Preload(options.Preload, options.PreloadOpt...)
