@@ -108,6 +108,30 @@ func FormatTimeByHour(duration int) string {
 	return timeStr
 }
 
+func FormatNumberByChinese(amount int64) string {
+	if amount >= 100000000 {
+		value := amount / 100000000
+		remainder := amount % 100000000
+		if remainder == 0 {
+			return fmt.Sprintf("%d亿", value)
+		}
+
+		return fmt.Sprintf("%.1f亿", float64(amount)/100000000)
+	}
+
+	if amount >= 10000 {
+		value := amount / 10000
+		remainder := amount % 10000
+		if remainder == 0 {
+			return fmt.Sprintf("%d万", value)
+		}
+
+		return fmt.Sprintf("%.1f万", float64(amount)/10000)
+	}
+
+	return fmt.Sprintf("%d", amount)
+}
+
 // ButtonSlice 按钮切分，可以被3整除就按三个一组切分，否则按两个一组切分
 func ButtonSlice(data []map[string]any) [][]map[string]any {
 	if len(data) == 0 {
