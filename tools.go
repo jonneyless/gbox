@@ -127,7 +127,7 @@ func FormatNumberByChinese(amount int64) string {
 			return fmt.Sprintf("%d万", value)
 		}
 
-		return fmt.Sprintf("%.1f万", float64(amount)/10000)
+		return cast.ToString(amount)
 	}
 
 	return cast.ToString(amount)
