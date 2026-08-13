@@ -13,6 +13,7 @@ import (
 	"unsafe"
 
 	"github.com/forPelevin/gomoji"
+	"github.com/spf13/cast"
 )
 
 func Md5Unsafe(s string) string {
@@ -116,7 +117,7 @@ func FormatNumberByChinese(amount int64) string {
 			return fmt.Sprintf("%d亿", value)
 		}
 
-		return fmt.Sprintf("%.1f亿", float64(amount)/100000000)
+		return cast.ToString(amount)
 	}
 
 	if amount >= 10000 {
@@ -129,7 +130,7 @@ func FormatNumberByChinese(amount int64) string {
 		return fmt.Sprintf("%.1f万", float64(amount)/10000)
 	}
 
-	return fmt.Sprintf("%d", amount)
+	return cast.ToString(amount)
 }
 
 // ButtonSlice 按钮切分，可以被3整除就按三个一组切分，否则按两个一组切分
