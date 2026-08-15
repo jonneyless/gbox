@@ -5,9 +5,8 @@ import (
 	"time"
 
 	"github.com/jonneyless/gbox/logger"
-
 	"go.uber.org/zap"
-	"gorm.io/driver/postgres"
+	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
@@ -56,7 +55,7 @@ type Database struct {
 func (d *Database) Connect() *gorm.DB {
 	var err error
 
-	d.db, err = gorm.Open(postgres.Open(d.dsn), &gorm.Config{
+	d.db, err = gorm.Open(mysql.Open(d.dsn), &gorm.Config{
 		Logger: logger.NewGormZapLogger(d.logger, d.logLevel),
 	})
 	if err != nil {
