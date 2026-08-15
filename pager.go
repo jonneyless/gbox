@@ -151,7 +151,7 @@ func GetPagination(prefix string, page, pageSize, pageMax int) []map[string]any 
 	}
 	pageButtons = append(pageButtons, map[string]any{
 		"text":          "...",
-		"callback_data": fmt.Sprintf(key, i+1, pageSize, pageMax),
+		"callback_data": fmt.Sprintf(key, i, pageSize, pageMax),
 	})
 	pageButtons = append(pageButtons, map[string]any{
 		"text":          "尾页",
