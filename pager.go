@@ -29,7 +29,8 @@ func GetPagination(prefix string, page, pageSize, pageMax int) []map[string]any 
 	// 总页数大于8页
 	// 前3页：1,2,3,4,5,...,尾页
 	if page <= 3 {
-		for i := 1; i <= 5; i++ {
+		var i int
+		for i = 1; i <= 5; i++ {
 			text := fmt.Sprintf("%d", i)
 			if i == page {
 				text = fmt.Sprintf("✅%d", i)
@@ -41,7 +42,7 @@ func GetPagination(prefix string, page, pageSize, pageMax int) []map[string]any 
 		}
 		pageButtons = append(pageButtons, map[string]any{
 			"text":          "...",
-			"callback_data": "",
+			"callback_data": fmt.Sprintf(key, i+1, pageSize, pageMax),
 		})
 		pageButtons = append(pageButtons, map[string]any{
 			"text":          "尾页",
@@ -56,7 +57,8 @@ func GetPagination(prefix string, page, pageSize, pageMax int) []map[string]any 
 			"text":          "首页",
 			"callback_data": fmt.Sprintf(key, 1, pageSize, pageMax),
 		})
-		for i := 2; i <= 6; i++ {
+		var i int
+		for i = 2; i <= 6; i++ {
 			text := fmt.Sprintf("%d", i)
 			if i == page {
 				text = fmt.Sprintf("✅%d", i)
@@ -68,7 +70,7 @@ func GetPagination(prefix string, page, pageSize, pageMax int) []map[string]any 
 		}
 		pageButtons = append(pageButtons, map[string]any{
 			"text":          "...",
-			"callback_data": "",
+			"callback_data": fmt.Sprintf(key, i+1, pageSize, pageMax),
 		})
 		pageButtons = append(pageButtons, map[string]any{
 			"text":          "尾页",
@@ -85,7 +87,7 @@ func GetPagination(prefix string, page, pageSize, pageMax int) []map[string]any 
 		})
 		pageButtons = append(pageButtons, map[string]any{
 			"text":          "...",
-			"callback_data": "",
+			"callback_data": fmt.Sprintf(key, pageMax-5, pageSize, pageMax),
 		})
 		for i := pageMax - 4; i <= pageMax-1; i++ {
 			text := fmt.Sprintf("%d", i)
@@ -112,7 +114,7 @@ func GetPagination(prefix string, page, pageSize, pageMax int) []map[string]any 
 		})
 		pageButtons = append(pageButtons, map[string]any{
 			"text":          "...",
-			"callback_data": "",
+			"callback_data": fmt.Sprintf(key, pageMax-4, pageSize, pageMax),
 		})
 		for i := pageMax - 3; i <= pageMax; i++ {
 			text := fmt.Sprintf("%d", i)
@@ -134,9 +136,10 @@ func GetPagination(prefix string, page, pageSize, pageMax int) []map[string]any 
 	})
 	pageButtons = append(pageButtons, map[string]any{
 		"text":          "...",
-		"callback_data": "",
+		"callback_data": fmt.Sprintf(key, page-2, pageSize, pageMax),
 	})
-	for i := page - 1; i <= page+1; i++ {
+	var i int
+	for i = page - 1; i <= page+1; i++ {
 		text := fmt.Sprintf("%d", i)
 		if i == page {
 			text = fmt.Sprintf("✅%d", i)
@@ -148,7 +151,7 @@ func GetPagination(prefix string, page, pageSize, pageMax int) []map[string]any 
 	}
 	pageButtons = append(pageButtons, map[string]any{
 		"text":          "...",
-		"callback_data": "",
+		"callback_data": fmt.Sprintf(key, i+1, pageSize, pageMax),
 	})
 	pageButtons = append(pageButtons, map[string]any{
 		"text":          "尾页",
