@@ -629,7 +629,11 @@ func (srv *BaseService[T]) buildQueryCore(db *gorm.DB, conditions []Condition) *
 		operator := strings.ToUpper(cond.Operator)
 		switch operator {
 		case "=", "==":
-			query = query.Where(fmt.Sprintf("%s = ?", cond.Field), cond.Value)
+			value := cond.Value
+			if _, ok := cond.Value.(bool); ok {
+				value = cast.ToString(cond.Value)
+			}
+			query = query.Where(fmt.Sprintf("%s = ?", cond.Field), value)
 		case ">":
 			query = query.Where(fmt.Sprintf("%s > ?", cond.Field), cond.Value)
 		case ">=":
