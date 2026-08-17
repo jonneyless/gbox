@@ -13,6 +13,7 @@ import (
 type LogConfig struct {
 	DebugLevel   string
 	InfoLevel    string
+	WarnLevel    string
 	ErrorLevel   string
 	PanicLevel   string
 	FatalLevel   string
@@ -24,6 +25,7 @@ type LogConfig struct {
 var logConfig = LogConfig{
 	DebugLevel:   "debug",
 	InfoLevel:    "info",
+	WarnLevel:    "warn",
 	ErrorLevel:   "error",
 	PanicLevel:   "panic",
 	FatalLevel:   "fatal",
@@ -105,6 +107,8 @@ func zapLevelEnabler(cfg *ZapConfig) zapcore.LevelEnabler {
 		return zap.DebugLevel
 	case logConfig.InfoLevel:
 		return zap.InfoLevel
+	case logConfig.WarnLevel:
+		return zap.WarnLevel
 	case logConfig.ErrorLevel:
 		return zap.ErrorLevel
 	case logConfig.PanicLevel:
