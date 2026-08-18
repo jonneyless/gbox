@@ -213,3 +213,10 @@ func ValidateAdsContent(s string) bool {
 
 	return true
 }
+
+func SafeString(m map[string]any, key string) string {
+	if v, ok := m[key].(string); ok {
+		return v
+	}
+	return ""
+}
