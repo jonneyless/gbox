@@ -52,13 +52,30 @@ type QueryOption func(*QueryOptions)
 type QueryOrder struct {
 	OrderBy    string
 	Descending bool
+	Expression *clause.Expr
 }
 
-func WithOrder(orderBy string, descending bool) QueryOption {
+func WithOrder(orderBy string) QueryOption {
+	return func(o *QueryOptions) {
+		o.Orders = append(o.Orders, QueryOrder{
+			OrderBy: orderBy,
+		})
+	}
+}
+
+func WithOrderDesc(orderBy string) QueryOption {
 	return func(o *QueryOptions) {
 		o.Orders = append(o.Orders, QueryOrder{
 			OrderBy:    orderBy,
-			Descending: descending,
+			Descending: true,
+		})
+	}
+}
+
+func WithOrderExpr(orderBy string) QueryOption {
+	return func(o *QueryOptions) {
+		o.Orders = append(o.Orders, QueryOrder{
+			Expression: new(gorm.Expr(orderBy)),
 		})
 	}
 }
@@ -212,10 +229,14 @@ func (srv *BaseService[T]) GetByCondition(conditions []Condition, opts ...QueryO
 
 	if len(options.Orders) > 0 {
 		for _, order := range options.Orders {
-			if order.Descending {
-				query = query.Order(order.OrderBy + " DESC")
+			if order.Expression != nil {
+				query = query.Order(order.Expression)
 			} else {
-				query = query.Order(order.OrderBy + " ASC")
+				if order.Descending {
+					query = query.Order(order.OrderBy + " DESC")
+				} else {
+					query = query.Order(order.OrderBy + " ASC")
+				}
 			}
 		}
 	}
@@ -277,10 +298,14 @@ func (srv *BaseService[T]) Find(conditions []Condition, opts ...QueryOption) ([]
 
 	if len(options.Orders) > 0 {
 		for _, order := range options.Orders {
-			if order.Descending {
-				query = query.Order(order.OrderBy + " DESC")
+			if order.Expression != nil {
+				query = query.Order(order.Expression)
 			} else {
-				query = query.Order(order.OrderBy + " ASC")
+				if order.Descending {
+					query = query.Order(order.OrderBy + " DESC")
+				} else {
+					query = query.Order(order.OrderBy + " ASC")
+				}
 			}
 		}
 	}

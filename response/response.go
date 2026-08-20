@@ -7,6 +7,8 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+var successCode int
+
 type Response struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
@@ -20,10 +22,14 @@ type PageResponse struct {
 	Data     any   `json:"data"`
 }
 
+func SetSuccessCode(code int) {
+	successCode = code
+}
+
 // Success 成功响应
 func Success(c echo.Context, data any) error {
 	return c.JSON(http.StatusOK, Response{
-		Code:    0,
+		Code:    successCode,
 		Message: "success",
 		Data:    data,
 	})
@@ -32,7 +38,7 @@ func Success(c echo.Context, data any) error {
 // 自定义文本响应
 func Message(c echo.Context, message string) error {
 	return c.JSON(http.StatusOK, Response{
-		Code:    0,
+		Code:    successCode,
 		Message: message,
 	})
 }
@@ -40,7 +46,7 @@ func Message(c echo.Context, message string) error {
 // Ok 简单的成功响应
 func Ok(c echo.Context) error {
 	return c.JSON(http.StatusOK, Response{
-		Code:    0,
+		Code:    successCode,
 		Message: "success",
 	})
 }
@@ -100,7 +106,7 @@ func InternalServerError(c echo.Context, err error) error {
 // Page 分页响应
 func Page(c echo.Context, total int64, page int, pageSize int, data any) error {
 	return c.JSON(http.StatusOK, Response{
-		Code:    0,
+		Code:    successCode,
 		Message: "success",
 		Data: PageResponse{
 			Total:    total,
