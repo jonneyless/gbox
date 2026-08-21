@@ -2,6 +2,8 @@ package postgresql
 
 import (
 	"fmt"
+	"runtime/debug"
+	"strings"
 	"time"
 
 	"github.com/jonneyless/gbox/logger"
@@ -75,6 +77,42 @@ func (d *Database) Connect() *gorm.DB {
 		d.logger.Infoln(d.dsn)
 		d.logger.Panicln(err)
 	}
+
+	// ✅ 添加回调：在查询前追踪
+	d.db.Callback().Query().Before("gorm:query").Register("trace_query", func(db *gorm.DB) {
+		sql := db.Statement.SQL.String()
+
+		// 检测有问题的SQL模式
+		if strings.Contains(sql, "SELECT * FROM \"chat\"") &&
+			strings.Contains(sql, "\"chat\".\"id\" =") &&
+			strings.Contains(sql, "status = 9") {
+
+			d.logger.Errorw("🚨 PROBLEMATIC SQL DETECTED",
+				"sql", sql,
+				"args", db.Statement.Vars,
+				"preloads", db.Statement.Preloads,
+			)
+
+			// 打印堆栈
+			stack := string(debug.Stack())
+			d.logger.Errorw("Full Stack Trace", "stack", stack)
+		}
+	})
+
+	// ✅ 添加回调：在查询后追踪（也能捕获到）
+	d.db.Callback().Query().After("gorm:query").Register("trace_after_query", func(db *gorm.DB) {
+		sql := db.Statement.SQL.String()
+
+		if strings.Contains(sql, "SELECT * FROM \"chat\"") &&
+			strings.Contains(sql, "\"chat\".\"id\" =") {
+
+			d.logger.Errorw("🚨 QUERY EXECUTED",
+				"sql", sql,
+				"args", db.Statement.Vars,
+				"rows_affected", db.RowsAffected,
+			)
+		}
+	})
 
 	sqlDB, _ := d.db.DB()
 	sqlDB.SetMaxOpenConns(max(d.maxOpenConns, 5))
