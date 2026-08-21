@@ -2,8 +2,6 @@ package postgresql
 
 import (
 	"fmt"
-	"runtime/debug"
-	"strings"
 	"time"
 
 	"github.com/jonneyless/gbox/logger"
@@ -78,58 +76,30 @@ func (d *Database) Connect() *gorm.DB {
 		d.logger.Panicln(err)
 	}
 
-	// ✅ 添加回调：在查询前追踪
-	d.db.Callback().Query().Before("gorm:query").Register("trace_query", func(db *gorm.DB) {
-		sql := db.Statement.SQL.String()
-
-		// 检测有问题的SQL模式
-		if strings.Contains(sql, "SELECT * FROM \"chat\"") &&
-			strings.Contains(sql, "\"chat\".\"id\" =") &&
-			strings.Contains(sql, "status = 9") {
-
-			d.logger.Errorw("🚨 PROBLEMATIC SQL DETECTED",
-				"sql", sql,
-				"args", db.Statement.Vars,
-				"preloads", db.Statement.Preloads,
-			)
-
-			// 打印堆栈
-			stack := string(debug.Stack())
-			d.logger.Errorw("Full Stack Trace", "stack", stack)
-		}
-	})
-
-	// ✅ 添加回调：在查询后追踪（也能捕获到）
-	d.db.Callback().Query().After("gorm:query").Register("trace_after_query", func(db *gorm.DB) {
-		sql := db.Statement.SQL.String()
-		if sql == "" {
-			return
-		}
-
-		if strings.Contains(sql, "SELECT * FROM \"chat\"") &&
-			strings.Contains(sql, "\"chat\".\"id\"") {
-
-			// ✅ 直接打印参数，不序列化
-			d.logger.Errorw("🚨 QUERY EXECUTED",
-				"sql", sql,
-				"args", fmt.Sprintf("%+v", db.Statement.Vars), // 直接格式化
-				"args_len", len(db.Statement.Vars),
-				"rows_affected", db.RowsAffected,
-			)
-
-			// ✅ 打印每个参数的类型
-			for i, arg := range db.Statement.Vars {
-				d.logger.Errorw(fmt.Sprintf("  Arg[%d]", i),
-					"value", arg,
-					"type", fmt.Sprintf("%T", arg),
-				)
-			}
-
-			// ✅ 打印完整堆栈
-			stack := string(debug.Stack())
-			d.logger.Errorw("Full stack trace", "stack", stack)
-		}
-	})
+	// 调试用代码
+	//d.db.Callback().Query().After("gorm:query").Register("trace_after_query", func(db *gorm.DB) {
+	//	sql := db.Statement.SQL.String()
+	//	if sql == "" {
+	//		return
+	//	}
+	//
+	//	d.logger.Debugw("QUERY EXECUTED",
+	//		"sql", sql,
+	//		"args", fmt.Sprintf("%+v", db.Statement.Vars), // 直接格式化
+	//		"args_len", len(db.Statement.Vars),
+	//		"rows_affected", db.RowsAffected,
+	//	)
+	//
+	//	for i, arg := range db.Statement.Vars {
+	//		d.logger.Debugw(fmt.Sprintf("  Arg[%d]", i),
+	//			"value", arg,
+	//			"type", fmt.Sprintf("%T", arg),
+	//		)
+	//	}
+	//
+	//	stack := string(debug.Stack())
+	//	d.logger.Debugw("Full stack trace", "stack", stack)
+	//})
 
 	sqlDB, _ := d.db.DB()
 	sqlDB.SetMaxOpenConns(max(d.maxOpenConns, 5))
