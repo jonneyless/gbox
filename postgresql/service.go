@@ -831,20 +831,17 @@ func (srv *BaseService[T]) loopAndCondition(query *gorm.DB, conditions []Conditi
 }
 
 func (srv *BaseService[T]) loopOrCondition(query *gorm.DB, conditions []Condition) *gorm.DB {
-	query = query.Where(func(tx *gorm.DB) *gorm.DB {
-		for i, cond := range conditions {
-			if !isValidFieldName(cond.Field) {
-				continue
-			}
-
-			if i == 0 {
-				tx = srv.parseAndCondition(tx, cond)
-			} else {
-				tx = srv.parseOrCondition(tx, cond)
-			}
+	for i, cond := range conditions {
+		if !isValidFieldName(cond.Field) {
+			continue
 		}
-		return tx
-	})
+
+		if i == 0 {
+			query = srv.parseAndCondition(query, cond)
+		} else {
+			query = srv.parseOrCondition(query, cond)
+		}
+	}
 
 	return query
 }
