@@ -646,6 +646,16 @@ func (srv *BaseService[T]) SumFloat64(column string, conditions []Condition) (fl
 	return sum, nil
 }
 
+func (srv *BaseService[T]) SumDecimal(column string, conditions []Condition) (decimal.Decimal, error) {
+	var sum decimal.Decimal
+	err := srv.buildQuery(conditions).Select(fmt.Sprintf("SUM(%s)", column)).Scan(&sum).Error
+	if err != nil {
+		return decimal.Zero, err
+	}
+
+	return sum, nil
+}
+
 func (srv *BaseService[T]) CleanCache(id int64) {
 	if srv.Prefix == "" || id == 0 {
 		return
