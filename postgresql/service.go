@@ -816,7 +816,7 @@ func (srv *BaseService[T]) parseOrCondition(query *gorm.DB, cond Condition) *gor
 func (srv *BaseService[T]) loopAndCondition(query *gorm.DB, conditions []Condition) *gorm.DB {
 	for _, cond := range conditions {
 		if len(cond.Or) > 0 {
-			query = query.Where(srv.loopOrCondition(srv.getDB(), cond.Or))
+			query = query.Where(srv.loopOrCondition(query, cond.Or))
 			continue
 		}
 
