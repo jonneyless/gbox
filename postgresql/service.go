@@ -711,69 +711,69 @@ func (srv *BaseService[T]) parseCondition(query *gorm.DB, cond Condition) *gorm.
 		}
 	case ">":
 		if cond.IsOr {
-			query = query.Where(fmt.Sprintf("%s > ?", cond.Field), cond.Value)
+			query = query.Or(fmt.Sprintf("%s > ?", cond.Field), cond.Value)
 		} else {
 			query = query.Where(fmt.Sprintf("%s > ?", cond.Field), cond.Value)
 		}
 	case ">=":
 		if cond.IsOr {
-			query = query.Where(fmt.Sprintf("%s >= ?", cond.Field), cond.Value)
+			query = query.Or(fmt.Sprintf("%s >= ?", cond.Field), cond.Value)
 		} else {
 			query = query.Where(fmt.Sprintf("%s >= ?", cond.Field), cond.Value)
 		}
 	case "<":
 		if cond.IsOr {
-			query = query.Where(fmt.Sprintf("%s < ?", cond.Field), cond.Value)
+			query = query.Or(fmt.Sprintf("%s < ?", cond.Field), cond.Value)
 		} else {
 			query = query.Where(fmt.Sprintf("%s < ?", cond.Field), cond.Value)
 		}
 	case "<=":
 		if cond.IsOr {
-			query = query.Where(fmt.Sprintf("%s <= ?", cond.Field), cond.Value)
+			query = query.Or(fmt.Sprintf("%s <= ?", cond.Field), cond.Value)
 		} else {
 			query = query.Where(fmt.Sprintf("%s <= ?", cond.Field), cond.Value)
 		}
 	case "!=", "<>":
 		if cond.IsOr {
-			query = query.Where(fmt.Sprintf("%s != ?", cond.Field), cond.Value)
+			query = query.Or(fmt.Sprintf("%s != ?", cond.Field), cond.Value)
 		} else {
 			query = query.Where(fmt.Sprintf("%s != ?", cond.Field), cond.Value)
 		}
 	case "LIKE":
 		if cond.IsOr {
-			query = query.Where(fmt.Sprintf("%s LIKE ?", cond.Field), cond.Value)
+			query = query.Or(fmt.Sprintf("%s LIKE ?", cond.Field), cond.Value)
 		} else {
 			query = query.Where(fmt.Sprintf("%s LIKE ?", cond.Field), cond.Value)
 		}
 	case "IN":
 		if cond.IsOr {
-			query = query.Where(fmt.Sprintf("%s IN (?)", cond.Field), cond.Value)
+			query = query.Or(fmt.Sprintf("%s IN (?)", cond.Field), cond.Value)
 		} else {
 			query = query.Where(fmt.Sprintf("%s IN (?)", cond.Field), cond.Value)
 		}
 	case "NOT IN":
 		if cond.IsOr {
-			query = query.Where(fmt.Sprintf("%s NOT IN (?)", cond.Field), cond.Value)
+			query = query.Or(fmt.Sprintf("%s NOT IN (?)", cond.Field), cond.Value)
 		} else {
 			query = query.Where(fmt.Sprintf("%s NOT IN (?)", cond.Field), cond.Value)
 		}
 	case "BETWEEN":
 		if values, ok := cond.Value.([]any); ok && len(values) == 2 {
 			if cond.IsOr {
-				query = query.Where(fmt.Sprintf("%s BETWEEN ? AND ?", cond.Field), values[0], values[1])
+				query = query.Or(fmt.Sprintf("%s BETWEEN ? AND ?", cond.Field), values[0], values[1])
 			} else {
 				query = query.Where(fmt.Sprintf("%s BETWEEN ? AND ?", cond.Field), values[0], values[1])
 			}
 		}
 	case "IS NULL":
 		if cond.IsOr {
-			query = query.Where(fmt.Sprintf("%s IS NULL", cond.Field))
+			query = query.Or(fmt.Sprintf("%s IS NULL", cond.Field))
 		} else {
 			query = query.Where(fmt.Sprintf("%s IS NULL", cond.Field))
 		}
 	case "IS NOT NULL":
 		if cond.IsOr {
-			query = query.Where(fmt.Sprintf("%s IS NOT NULL", cond.Field))
+			query = query.Or(fmt.Sprintf("%s IS NOT NULL", cond.Field))
 		} else {
 			query = query.Where(fmt.Sprintf("%s IS NOT NULL", cond.Field))
 		}
@@ -781,7 +781,7 @@ func (srv *BaseService[T]) parseCondition(query *gorm.DB, cond Condition) *gorm.
 		fields := strings.Split(cond.Field, ".")
 		if len(fields) == 1 {
 			if cond.IsOr {
-				query = query.Where(fmt.Sprintf("%s @> ?", cond.Field), fmt.Sprintf(`{%s}`, cast.ToString(cond.Value)))
+				query = query.Or(fmt.Sprintf("%s @> ?", cond.Field), fmt.Sprintf(`{%s}`, cast.ToString(cond.Value)))
 			} else {
 				query = query.Where(fmt.Sprintf("%s @> ?", cond.Field), fmt.Sprintf(`{%s}`, cast.ToString(cond.Value)))
 			}
@@ -792,7 +792,7 @@ func (srv *BaseService[T]) parseCondition(query *gorm.DB, cond Condition) *gorm.
 				str = `{"%s": "%v"}`
 			}
 			if cond.IsOr {
-				query = query.Where(fmt.Sprintf("%s @> ?", fields[0]), fmt.Sprintf(str, cast.ToString(fields[1]), cond.Value))
+				query = query.Or(fmt.Sprintf("%s @> ?", fields[0]), fmt.Sprintf(str, cast.ToString(fields[1]), cond.Value))
 			} else {
 				query = query.Where(fmt.Sprintf("%s @> ?", fields[0]), fmt.Sprintf(str, cast.ToString(fields[1]), cond.Value))
 			}
@@ -803,7 +803,7 @@ func (srv *BaseService[T]) parseCondition(query *gorm.DB, cond Condition) *gorm.
 				str = `{"%s": {"%s": "%v"}}`
 			}
 			if cond.IsOr {
-				query = query.Where(fmt.Sprintf("%s @> ?", fields[0]), fmt.Sprintf(str, cast.ToString(fields[1]), cast.ToString(fields[2]), cond.Value))
+				query = query.Or(fmt.Sprintf("%s @> ?", fields[0]), fmt.Sprintf(str, cast.ToString(fields[1]), cast.ToString(fields[2]), cond.Value))
 			} else {
 				query = query.Where(fmt.Sprintf("%s @> ?", fields[0]), fmt.Sprintf(str, cast.ToString(fields[1]), cast.ToString(fields[2]), cond.Value))
 			}
