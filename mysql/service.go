@@ -622,7 +622,7 @@ func (srv *BaseService[T]) CountByCondition(conditions []Condition) (int64, erro
 	return count, nil
 }
 
-func (srv *BaseService[T]) Scan(result any, conditions []Condition) error {
+func (srv *BaseService[T]) Scan(result any, conditions []Condition, opts ...QueryOption) error {
 	return srv.buildQuery(conditions).Scan(&result).Error
 }
 
