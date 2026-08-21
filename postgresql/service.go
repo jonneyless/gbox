@@ -35,6 +35,7 @@ type CacheConfig struct {
 type Condition struct {
 	Field    string
 	Operator string
+	Or       []Condition
 	Value    any
 }
 
@@ -694,61 +695,148 @@ func (srv *BaseService[T]) CleanCacheBatch(ids []int64) {
 	_, _ = pipe.Exec()
 }
 
-func (srv *BaseService[T]) buildQueryCore(db *gorm.DB, conditions []Condition) *gorm.DB {
-	query := db.Model(new(T))
+func (srv *BaseService[T]) parseAndCondition(query *gorm.DB, cond Condition) *gorm.DB {
+	operator := strings.ToUpper(cond.Operator)
+	switch operator {
+	case "=", "==":
+		value := cond.Value
+		if _, ok := cond.Value.(bool); ok {
+			value = cast.ToString(cond.Value)
+		}
+		query = query.Where(fmt.Sprintf("%s = ?", cond.Field), value)
+	case ">":
+		query = query.Where(fmt.Sprintf("%s > ?", cond.Field), cond.Value)
+	case ">=":
+		query = query.Where(fmt.Sprintf("%s >= ?", cond.Field), cond.Value)
+	case "<":
+		query = query.Where(fmt.Sprintf("%s < ?", cond.Field), cond.Value)
+	case "<=":
+		query = query.Where(fmt.Sprintf("%s <= ?", cond.Field), cond.Value)
+	case "!=", "<>":
+		query = query.Where(fmt.Sprintf("%s != ?", cond.Field), cond.Value)
+	case "LIKE":
+		query = query.Where(fmt.Sprintf("%s LIKE ?", cond.Field), cond.Value)
+	case "IN":
+		query = query.Where(fmt.Sprintf("%s IN (?)", cond.Field), cond.Value)
+	case "NOT IN":
+		query = query.Where(fmt.Sprintf("%s NOT IN (?)", cond.Field), cond.Value)
+	case "BETWEEN":
+		if values, ok := cond.Value.([]any); ok && len(values) == 2 {
+			query = query.Where(fmt.Sprintf("%s BETWEEN ? AND ?", cond.Field), values[0], values[1])
+		}
+	case "IS NULL":
+		query = query.Where(fmt.Sprintf("%s IS NULL", cond.Field))
+	case "IS NOT NULL":
+		query = query.Where(fmt.Sprintf("%s IS NOT NULL", cond.Field))
+	case "JSONB":
+		fields := strings.Split(cond.Field, ".")
+		if len(fields) == 1 {
+			query = query.Where(fmt.Sprintf("%s @> ?", cond.Field), fmt.Sprintf(`{%s}`, cast.ToString(cond.Value)))
+		}
+		if len(fields) == 2 {
+			query = query.Where(fmt.Sprintf("%s @> ?", fields[0]), fmt.Sprintf(`{"%s": %v}`, cast.ToString(fields[1]), cond.Value))
+		}
+		if len(fields) == 3 {
+			query = query.Where(fmt.Sprintf("%s @> ?", fields[0]), fmt.Sprintf(`{"%s": {"%s": %v}}`, cast.ToString(fields[1]), cast.ToString(fields[2]), cond.Value))
+		}
+	default:
+		query = query.Where(fmt.Sprintf("%s = ?", cond.Field), cond.Value)
+	}
 
+	return query
+}
+
+func (srv *BaseService[T]) parseOrCondition(query *gorm.DB, cond Condition) *gorm.DB {
+	operator := strings.ToUpper(cond.Operator)
+	switch operator {
+	case "=", "==":
+		value := cond.Value
+		if _, ok := cond.Value.(bool); ok {
+			value = cast.ToString(cond.Value)
+		}
+		query = query.Or(fmt.Sprintf("%s = ?", cond.Field), value)
+	case ">":
+		query = query.Or(fmt.Sprintf("%s > ?", cond.Field), cond.Value)
+	case ">=":
+		query = query.Or(fmt.Sprintf("%s >= ?", cond.Field), cond.Value)
+	case "<":
+		query = query.Or(fmt.Sprintf("%s < ?", cond.Field), cond.Value)
+	case "<=":
+		query = query.Or(fmt.Sprintf("%s <= ?", cond.Field), cond.Value)
+	case "!=", "<>":
+		query = query.Or(fmt.Sprintf("%s != ?", cond.Field), cond.Value)
+	case "LIKE":
+		query = query.Or(fmt.Sprintf("%s LIKE ?", cond.Field), cond.Value)
+	case "IN":
+		query = query.Or(fmt.Sprintf("%s IN (?)", cond.Field), cond.Value)
+	case "NOT IN":
+		query = query.Or(fmt.Sprintf("%s NOT IN (?)", cond.Field), cond.Value)
+	case "BETWEEN":
+		if values, ok := cond.Value.([]any); ok && len(values) == 2 {
+			query = query.Or(fmt.Sprintf("%s BETWEEN ? AND ?", cond.Field), values[0], values[1])
+		}
+	case "IS NULL":
+		query = query.Or(fmt.Sprintf("%s IS NULL", cond.Field))
+	case "IS NOT NULL":
+		query = query.Or(fmt.Sprintf("%s IS NOT NULL", cond.Field))
+	case "JSONB":
+		fields := strings.Split(cond.Field, ".")
+		if len(fields) == 1 {
+			query = query.Or(fmt.Sprintf("%s @> ?", cond.Field), fmt.Sprintf(`{%s}`, cast.ToString(cond.Value)))
+		}
+		if len(fields) == 2 {
+			query = query.Or(fmt.Sprintf("%s @> ?", fields[0]), fmt.Sprintf(`{"%s": %v}`, cast.ToString(fields[1]), cond.Value))
+		}
+		if len(fields) == 3 {
+			query = query.Or(fmt.Sprintf("%s @> ?", fields[0]), fmt.Sprintf(`{"%s": {"%s": %v}}`, cast.ToString(fields[1]), cast.ToString(fields[2]), cond.Value))
+		}
+	default:
+		query = query.Or(fmt.Sprintf("%s = ?", cond.Field), cond.Value)
+	}
+
+	return query
+}
+
+func (srv *BaseService[T]) loopAndCondition(query *gorm.DB, conditions []Condition) *gorm.DB {
 	for _, cond := range conditions {
+		if len(cond.Or) > 0 {
+			query = srv.loopOrCondition(query, cond.Or)
+			continue
+		}
+
 		if !isValidFieldName(cond.Field) {
 			continue
 		}
 
-		operator := strings.ToUpper(cond.Operator)
-		switch operator {
-		case "=", "==":
-			value := cond.Value
-			if _, ok := cond.Value.(bool); ok {
-				value = cast.ToString(cond.Value)
-			}
-			query = query.Where(fmt.Sprintf("%s = ?", cond.Field), value)
-		case ">":
-			query = query.Where(fmt.Sprintf("%s > ?", cond.Field), cond.Value)
-		case ">=":
-			query = query.Where(fmt.Sprintf("%s >= ?", cond.Field), cond.Value)
-		case "<":
-			query = query.Where(fmt.Sprintf("%s < ?", cond.Field), cond.Value)
-		case "<=":
-			query = query.Where(fmt.Sprintf("%s <= ?", cond.Field), cond.Value)
-		case "!=", "<>":
-			query = query.Where(fmt.Sprintf("%s != ?", cond.Field), cond.Value)
-		case "LIKE":
-			query = query.Where(fmt.Sprintf("%s LIKE ?", cond.Field), cond.Value)
-		case "IN":
-			query = query.Where(fmt.Sprintf("%s IN (?)", cond.Field), cond.Value)
-		case "NOT IN":
-			query = query.Where(fmt.Sprintf("%s NOT IN (?)", cond.Field), cond.Value)
-		case "BETWEEN":
-			if values, ok := cond.Value.([]any); ok && len(values) == 2 {
-				query = query.Where(fmt.Sprintf("%s BETWEEN ? AND ?", cond.Field), values[0], values[1])
-			}
-		case "IS NULL":
-			query = query.Where(fmt.Sprintf("%s IS NULL", cond.Field))
-		case "IS NOT NULL":
-			query = query.Where(fmt.Sprintf("%s IS NOT NULL", cond.Field))
-		case "JSONB":
-			fields := strings.Split(cond.Field, ".")
-			if len(fields) == 1 {
-				query = query.Where(fmt.Sprintf("%s @> ?", cond.Field), fmt.Sprintf(`{%s}`, cast.ToString(cond.Value)))
-			}
-			if len(fields) == 2 {
-				query = query.Where(fmt.Sprintf("%s @> ?", fields[0]), fmt.Sprintf(`{"%s": %v}`, cast.ToString(fields[1]), cond.Value))
-			}
-			if len(fields) == 3 {
-				query = query.Where(fmt.Sprintf("%s @> ?", fields[0]), fmt.Sprintf(`{"%s": {"%s": %v}}`, cast.ToString(fields[1]), cast.ToString(fields[2]), cond.Value))
-			}
-		default:
-			query = query.Where(fmt.Sprintf("%s = ?", cond.Field), cond.Value)
-		}
+		query = srv.parseAndCondition(query, cond)
 	}
+
+	return query
+}
+
+func (srv *BaseService[T]) loopOrCondition(query *gorm.DB, conditions []Condition) *gorm.DB {
+	query.Where(func(query *gorm.DB) *gorm.DB {
+		for i, cond := range conditions {
+			if !isValidFieldName(cond.Field) {
+				continue
+			}
+
+			if i == 0 {
+				query = srv.parseAndCondition(query, cond)
+			} else {
+				query = srv.parseOrCondition(query, cond)
+			}
+		}
+
+		return query
+	})
+
+	return query
+}
+
+func (srv *BaseService[T]) buildQueryCore(db *gorm.DB, conditions []Condition) *gorm.DB {
+	query := db.Model(new(T))
+	query = srv.loopAndCondition(query, conditions)
 
 	return query
 }
