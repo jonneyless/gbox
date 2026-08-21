@@ -617,6 +617,57 @@ func (srv *BaseService[T]) CountByCondition(conditions []Condition) (int64, erro
 	return count, nil
 }
 
+func (srv *BaseService[T]) Raw(result any, sql string, args ...any) error {
+	return srv.getDB().Raw(sql, args...).Scan(result).Error
+}
+
+func (srv *BaseService[T]) Scan(result any, conditions []Condition, opts ...QueryOption) error {
+	options := &QueryOptions{
+		Select: []string{},
+	}
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	query := srv.buildQuery(conditions)
+
+	if len(options.Select) > 0 {
+		query = query.Select(options.Select)
+	}
+
+	return query.Scan(result).Error
+}
+
+func (srv *BaseService[T]) SumInt64(column string, conditions []Condition) (int64, error) {
+	var sum int64
+	err := srv.buildQuery(conditions).Select(fmt.Sprintf("SUM(%s)", column)).Scan(&sum).Error
+	if err != nil {
+		return 0, err
+	}
+
+	return sum, nil
+}
+
+func (srv *BaseService[T]) SumFloat64(column string, conditions []Condition) (float64, error) {
+	var sum float64
+	err := srv.buildQuery(conditions).Select(fmt.Sprintf("SUM(%s)", column)).Scan(&sum).Error
+	if err != nil {
+		return 0, err
+	}
+
+	return sum, nil
+}
+
+func (srv *BaseService[T]) SumDecimal(column string, conditions []Condition) (decimal.Decimal, error) {
+	var sum decimal.Decimal
+	err := srv.buildQuery(conditions).Select(fmt.Sprintf("SUM(%s)", column)).Scan(&sum).Error
+	if err != nil {
+		return decimal.Zero, err
+	}
+
+	return sum, nil
+}
+
 func (srv *BaseService[T]) CleanCache(id int64) {
 	if srv.Prefix == "" || id == 0 {
 		return

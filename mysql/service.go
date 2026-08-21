@@ -622,8 +622,25 @@ func (srv *BaseService[T]) CountByCondition(conditions []Condition) (int64, erro
 	return count, nil
 }
 
+func (srv *BaseService[T]) Raw(result any, sql string, args ...any) error {
+	return srv.getDB().Raw(sql, args...).Scan(result).Error
+}
+
 func (srv *BaseService[T]) Scan(result any, conditions []Condition, opts ...QueryOption) error {
-	return srv.buildQuery(conditions).Scan(&result).Error
+	options := &QueryOptions{
+		Select: []string{},
+	}
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	query := srv.buildQuery(conditions)
+
+	if len(options.Select) > 0 {
+		query = query.Select(options.Select)
+	}
+
+	return query.Scan(result).Error
 }
 
 func (srv *BaseService[T]) SumInt64(column string, conditions []Condition) (int64, error) {
