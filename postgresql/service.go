@@ -827,6 +827,10 @@ func (srv *BaseService[T]) loopCondition(query *gorm.DB, conditions []Condition)
 		}
 
 		if !isValidFieldName(cond.Field) {
+			if _, ok := cond.Value.(map[string]any); ok {
+				query = query.Where(cond.Value.(map[string]any))
+			}
+
 			continue
 		}
 

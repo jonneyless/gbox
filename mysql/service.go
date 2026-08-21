@@ -32,9 +32,11 @@ type CacheConfig struct {
 }
 
 type Condition struct {
-	Field    string
-	Operator string
-	Value    any
+	Field      string
+	Operator   string
+	Value      any
+	IsOr       bool
+	Conditions []Condition
 }
 
 type QueryOptions struct {
@@ -699,56 +701,145 @@ func (srv *BaseService[T]) CleanCacheBatch(ids []int64) {
 	_, _ = pipe.Exec()
 }
 
-func (srv *BaseService[T]) buildQueryCore(db *gorm.DB, conditions []Condition) *gorm.DB {
-	query := db.Model(new(T))
-
-	for _, cond := range conditions {
-		if !isValidFieldName(cond.Field) {
-			continue
+func (srv *BaseService[T]) parseCondition(query *gorm.DB, cond Condition) *gorm.DB {
+	operator := strings.ToUpper(cond.Operator)
+	switch operator {
+	case "=", "==":
+		value := cond.Value
+		if _, ok := cond.Value.(bool); ok {
+			value = cast.ToString(cond.Value)
 		}
-
-		operator := strings.ToUpper(cond.Operator)
-		switch operator {
-		case "=", "==":
-			query = query.Where(fmt.Sprintf("%s = ?", cond.Field), cond.Value)
-		case ">":
+		if cond.IsOr {
+			query = query.Or(fmt.Sprintf("%s = ?", cond.Field), value)
+		} else {
+			query = query.Where(fmt.Sprintf("%s = ?", cond.Field), value)
+		}
+	case ">":
+		if cond.IsOr {
+			query = query.Or(fmt.Sprintf("%s > ?", cond.Field), cond.Value)
+		} else {
 			query = query.Where(fmt.Sprintf("%s > ?", cond.Field), cond.Value)
-		case ">=":
+		}
+	case ">=":
+		if cond.IsOr {
+			query = query.Or(fmt.Sprintf("%s >= ?", cond.Field), cond.Value)
+		} else {
 			query = query.Where(fmt.Sprintf("%s >= ?", cond.Field), cond.Value)
-		case "<":
+		}
+	case "<":
+		if cond.IsOr {
+			query = query.Or(fmt.Sprintf("%s < ?", cond.Field), cond.Value)
+		} else {
 			query = query.Where(fmt.Sprintf("%s < ?", cond.Field), cond.Value)
-		case "<=":
+		}
+	case "<=":
+		if cond.IsOr {
+			query = query.Or(fmt.Sprintf("%s <= ?", cond.Field), cond.Value)
+		} else {
 			query = query.Where(fmt.Sprintf("%s <= ?", cond.Field), cond.Value)
-		case "!=", "<>":
+		}
+	case "!=", "<>":
+		if cond.IsOr {
+			query = query.Or(fmt.Sprintf("%s != ?", cond.Field), cond.Value)
+		} else {
 			query = query.Where(fmt.Sprintf("%s != ?", cond.Field), cond.Value)
-		case "LIKE":
+		}
+	case "LIKE":
+		if cond.IsOr {
+			query = query.Or(fmt.Sprintf("%s LIKE ?", cond.Field), cond.Value)
+		} else {
 			query = query.Where(fmt.Sprintf("%s LIKE ?", cond.Field), cond.Value)
-		case "IN":
+		}
+	case "IN":
+		if cond.IsOr {
+			query = query.Or(fmt.Sprintf("%s IN (?)", cond.Field), cond.Value)
+		} else {
 			query = query.Where(fmt.Sprintf("%s IN (?)", cond.Field), cond.Value)
-		case "NOT IN":
+		}
+	case "NOT IN":
+		if cond.IsOr {
+			query = query.Or(fmt.Sprintf("%s NOT IN (?)", cond.Field), cond.Value)
+		} else {
 			query = query.Where(fmt.Sprintf("%s NOT IN (?)", cond.Field), cond.Value)
-		case "BETWEEN":
-			if values, ok := cond.Value.([]any); ok && len(values) == 2 {
+		}
+	case "BETWEEN":
+		if values, ok := cond.Value.([]any); ok && len(values) == 2 {
+			if cond.IsOr {
+				query = query.Or(fmt.Sprintf("%s BETWEEN ? AND ?", cond.Field), values[0], values[1])
+			} else {
 				query = query.Where(fmt.Sprintf("%s BETWEEN ? AND ?", cond.Field), values[0], values[1])
 			}
-		case "IS NULL":
+		}
+	case "IS NULL":
+		if cond.IsOr {
+			query = query.Or(fmt.Sprintf("%s IS NULL", cond.Field))
+		} else {
 			query = query.Where(fmt.Sprintf("%s IS NULL", cond.Field))
-		case "IS NOT NULL":
+		}
+	case "IS NOT NULL":
+		if cond.IsOr {
+			query = query.Or(fmt.Sprintf("%s IS NOT NULL", cond.Field))
+		} else {
 			query = query.Where(fmt.Sprintf("%s IS NOT NULL", cond.Field))
-		case "JSON_EXTRACT", "JSON":
-			// MySQL JSON 查询：支持 JSON_EXTRACT 或 -> 操作符
-			fields := strings.Split(cond.Field, ".")
-			if len(fields) == 1 {
+		}
+	case "JSONB":
+		fields := strings.Split(cond.Field, ".")
+		if len(fields) == 1 {
+			if cond.IsOr {
+				query = query.Or(fmt.Sprintf("JSON_EXTRACT(%s, '$.\"%s\"') = ?", cond.Field, cast.ToString(cond.Value)), cond.Value)
+			} else {
 				query = query.Where(fmt.Sprintf("JSON_EXTRACT(%s, '$.\"%s\"') = ?", cond.Field, cast.ToString(cond.Value)), cond.Value)
-			} else if len(fields) == 2 {
+			}
+		}
+		if len(fields) == 2 {
+			if cond.IsOr {
+				query = query.Or(fmt.Sprintf("JSON_EXTRACT(%s, '$.\"%s\"') = ?", fields[0], fields[1]), cond.Value)
+			} else {
 				query = query.Where(fmt.Sprintf("JSON_EXTRACT(%s, '$.\"%s\"') = ?", fields[0], fields[1]), cond.Value)
-			} else if len(fields) == 3 {
+			}
+		}
+		if len(fields) == 3 {
+			if cond.IsOr {
+				query = query.Or(fmt.Sprintf("JSON_EXTRACT(%s, '$.\"%s\".\"%s\"') = ?", fields[0], fields[1], fields[2]), cond.Value)
+			} else {
 				query = query.Where(fmt.Sprintf("JSON_EXTRACT(%s, '$.\"%s\".\"%s\"') = ?", fields[0], fields[1], fields[2]), cond.Value)
 			}
-		default:
+		}
+	default:
+		if cond.IsOr {
+			query = query.Or(fmt.Sprintf("%s = ?", cond.Field), cond.Value)
+		} else {
 			query = query.Where(fmt.Sprintf("%s = ?", cond.Field), cond.Value)
 		}
 	}
+
+	return query
+}
+
+func (srv *BaseService[T]) loopCondition(query *gorm.DB, conditions []Condition) *gorm.DB {
+	for _, cond := range conditions {
+		if len(cond.Conditions) > 0 {
+			query = query.Where(srv.loopCondition(srv.getDB(), cond.Conditions))
+			continue
+		}
+
+		if !isValidFieldName(cond.Field) {
+			if _, ok := cond.Value.(map[string]any); ok {
+				query = query.Where(cond.Value.(map[string]any))
+			}
+
+			continue
+		}
+
+		query = srv.parseCondition(query, cond)
+	}
+
+	return query
+}
+
+func (srv *BaseService[T]) buildQueryCore(db *gorm.DB, conditions []Condition) *gorm.DB {
+	query := db.Model(new(T))
+	query = srv.loopCondition(query, conditions)
 
 	return query
 }
