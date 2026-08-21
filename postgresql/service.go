@@ -835,7 +835,8 @@ func (srv *BaseService[T]) loopOrCondition(query *gorm.DB, conditions []Conditio
 }
 
 func (srv *BaseService[T]) buildQueryCore(db *gorm.DB, conditions []Condition) *gorm.DB {
-	query := db.Model(new(T))
+	cleanDB := db.Session(&gorm.Session{NewDB: true})
+	query := cleanDB.Model(new(T))
 	query = srv.loopAndCondition(query, conditions)
 
 	return query
