@@ -553,6 +553,26 @@ func (srv *BaseService[T]) DeleteByCondition(conditions []Condition) (int64, err
 	return result.RowsAffected, nil
 }
 
+func (srv *BaseService[T]) SumInt64(column string, conditions []Condition) (int64, error) {
+	var sum int64
+	err := srv.buildQuery(conditions).Select(fmt.Sprintf("SUM(%s)", column)).Scan(&sum).Error
+	if err != nil {
+		return 0, err
+	}
+
+	return sum, nil
+}
+
+func (srv *BaseService[T]) SumFloat64(column string, conditions []Condition) (float64, error) {
+	var sum float64
+	err := srv.buildQuery(conditions).Select(fmt.Sprintf("SUM(%s)", column)).Scan(&sum).Error
+	if err != nil {
+		return 0, err
+	}
+
+	return sum, nil
+}
+
 func (srv *BaseService[T]) ForceDelete(id int64) error {
 	err := DB().Transaction(func(tx *gorm.DB) error {
 		if err := tx.Unscoped().Delete(new(T), id).Error; err != nil {
