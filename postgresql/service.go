@@ -734,10 +734,18 @@ func (srv *BaseService[T]) parseAndCondition(query *gorm.DB, cond Condition) *go
 			query = query.Where(fmt.Sprintf("%s @> ?", cond.Field), fmt.Sprintf(`{%s}`, cast.ToString(cond.Value)))
 		}
 		if len(fields) == 2 {
-			query = query.Where(fmt.Sprintf("%s @> ?", fields[0]), fmt.Sprintf(`{"%s": %v}`, cast.ToString(fields[1]), cond.Value))
+			str := `{"%s": %v}`
+			if _, ok := cond.Value.(string); ok {
+				str = `{"%s": "%v"}`
+			}
+			query = query.Where(fmt.Sprintf("%s @> ?", fields[0]), fmt.Sprintf(str, cast.ToString(fields[1]), cond.Value))
 		}
 		if len(fields) == 3 {
-			query = query.Where(fmt.Sprintf("%s @> ?", fields[0]), fmt.Sprintf(`{"%s": {"%s": %v}}`, cast.ToString(fields[1]), cast.ToString(fields[2]), cond.Value))
+			str := `{"%s": {"%s": %v}}`
+			if _, ok := cond.Value.(string); ok {
+				str = `{"%s": {"%s": "%v"}}`
+			}
+			query = query.Where(fmt.Sprintf("%s @> ?", fields[0]), fmt.Sprintf(str, cast.ToString(fields[1]), cast.ToString(fields[2]), cond.Value))
 		}
 	default:
 		query = query.Where(fmt.Sprintf("%s = ?", cond.Field), cond.Value)
@@ -785,10 +793,18 @@ func (srv *BaseService[T]) parseOrCondition(query *gorm.DB, cond Condition) *gor
 			query = query.Or(fmt.Sprintf("%s @> ?", cond.Field), fmt.Sprintf(`{%s}`, cast.ToString(cond.Value)))
 		}
 		if len(fields) == 2 {
-			query = query.Or(fmt.Sprintf("%s @> ?", fields[0]), fmt.Sprintf(`{"%s": %v}`, cast.ToString(fields[1]), cond.Value))
+			str := `{"%s": %v}`
+			if _, ok := cond.Value.(string); ok {
+				str = `{"%s": "%v"}`
+			}
+			query = query.Or(fmt.Sprintf("%s @> ?", fields[0]), fmt.Sprintf(str, cast.ToString(fields[1]), cond.Value))
 		}
 		if len(fields) == 3 {
-			query = query.Or(fmt.Sprintf("%s @> ?", fields[0]), fmt.Sprintf(`{"%s": {"%s": %v}}`, cast.ToString(fields[1]), cast.ToString(fields[2]), cond.Value))
+			str := `{"%s": {"%s": %v}}`
+			if _, ok := cond.Value.(string); ok {
+				str = `{"%s": {"%s": "%v"}}`
+			}
+			query = query.Or(fmt.Sprintf("%s @> ?", fields[0]), fmt.Sprintf(str, cast.ToString(fields[1]), cast.ToString(fields[2]), cond.Value))
 		}
 	default:
 		query = query.Or(fmt.Sprintf("%s = ?", cond.Field), cond.Value)
