@@ -2,7 +2,6 @@ package postgresql
 
 import (
 	"fmt"
-	"runtime/debug"
 	"time"
 
 	"github.com/jonneyless/gbox/logger"
@@ -82,19 +81,6 @@ func (d *Database) Connect() *gorm.DB {
 	sqlDB.SetMaxIdleConns(max(d.maxIdleConns, 2))
 	sqlDB.SetConnMaxLifetime(30 * time.Minute)
 	sqlDB.SetConnMaxIdleTime(10 * time.Minute)
-
-	// ✅ 添加回调，在每次查询时打印调用栈
-	d.db.Callback().Query().Before("gorm:query").Register("trace_query", func(db *gorm.DB) {
-		// 只在包含错误SQL的查询时打印
-		if db.Statement.SQL.String() != "" {
-			// 打印调用栈
-			fmt.Printf("\n=== SQL Trace ===\n")
-			fmt.Printf("SQL: %s\n", db.Statement.SQL.String())
-			fmt.Printf("Args: %+v\n", db.Statement.Vars)
-			fmt.Printf("Stack:\n%s\n", string(debug.Stack()))
-			fmt.Printf("=== End Trace ===\n\n")
-		}
-	})
 
 	return d.db
 }
