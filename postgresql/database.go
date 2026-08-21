@@ -102,15 +102,32 @@ func (d *Database) Connect() *gorm.DB {
 	// ✅ 添加回调：在查询后追踪（也能捕获到）
 	d.db.Callback().Query().After("gorm:query").Register("trace_after_query", func(db *gorm.DB) {
 		sql := db.Statement.SQL.String()
+		if sql == "" {
+			return
+		}
 
 		if strings.Contains(sql, "SELECT * FROM \"chat\"") &&
-			strings.Contains(sql, "\"chat\".\"id\" =") {
+			strings.Contains(sql, "\"chat\".\"id\"") {
 
+			// ✅ 直接打印参数，不序列化
 			d.logger.Errorw("🚨 QUERY EXECUTED",
 				"sql", sql,
-				"args", db.Statement.Vars,
+				"args", fmt.Sprintf("%+v", db.Statement.Vars), // 直接格式化
+				"args_len", len(db.Statement.Vars),
 				"rows_affected", db.RowsAffected,
 			)
+
+			// ✅ 打印每个参数的类型
+			for i, arg := range db.Statement.Vars {
+				d.logger.Errorw(fmt.Sprintf("  Arg[%d]", i),
+					"value", arg,
+					"type", fmt.Sprintf("%T", arg),
+				)
+			}
+
+			// ✅ 打印完整堆栈
+			stack := string(debug.Stack())
+			d.logger.Errorw("Full stack trace", "stack", stack)
 		}
 	})
 
