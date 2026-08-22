@@ -137,7 +137,7 @@ func FormatNumberByChinese(amount int64) string {
 		return cast.ToString(amount)
 	}
 
-	if amount >= 10000 {
+	if amount >= 100000 {
 		value := amount / 10000
 		remainder := amount % 10000
 		if remainder == 0 {
