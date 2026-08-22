@@ -698,6 +698,19 @@ func (srv *BaseService[T]) CleanCacheBatch(ids []int64) {
 
 func (srv *BaseService[T]) parseCondition(query *gorm.DB, cond Condition) *gorm.DB {
 	operator := strings.ToUpper(cond.Operator)
+
+	if operator == "" {
+		if _, ok := cond.Value.([]any); ok {
+			operator = "IN"
+		}
+
+		if _, ok := cond.Value.(string); ok {
+			if cond.Value.(string) == "null" {
+				operator = "IS NULL"
+			}
+		}
+	}
+
 	switch operator {
 	case "=", "==":
 		value := cond.Value

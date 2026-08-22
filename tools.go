@@ -8,6 +8,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"sort"
 	"strings"
 	"unicode"
 	"unsafe"
@@ -15,6 +16,22 @@ import (
 	"github.com/forPelevin/gomoji"
 	"github.com/spf13/cast"
 )
+
+func GenerateID(params map[string]any) string {
+	keys := make([]string, 0, len(params))
+	for k := range params {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	var str strings.Builder
+	for _, k := range keys {
+		str.WriteString(fmt.Sprintf("%s=%v&", k, params[k]))
+	}
+
+	hash := md5.Sum([]byte(str.String()))
+	return hex.EncodeToString(hash[:])
+}
 
 func Md5Unsafe(s string) string {
 	h := md5.New()
