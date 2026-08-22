@@ -700,7 +700,8 @@ func (srv *BaseService[T]) parseCondition(query *gorm.DB, cond Condition) *gorm.
 	operator := strings.ToUpper(cond.Operator)
 
 	if operator == "" {
-		if _, ok := cond.Value.([]any); ok {
+		switch cond.Value.(type) {
+		case []any, []int64, []string, []int32, []int16, []int8, []int:
 			operator = "IN"
 		}
 
