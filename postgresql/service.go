@@ -642,7 +642,7 @@ func (srv *BaseService[T]) Scan(result any, conditions []Condition, opts ...Quer
 
 func (srv *BaseService[T]) SumInt64(column string, conditions []Condition) (int64, error) {
 	var sum int64
-	err := srv.buildQuery(conditions).Select(fmt.Sprintf("SUM(%s)", column)).Scan(&sum).Error
+	err := srv.buildQuery(conditions).Select(fmt.Sprintf("COALESCE(SUM(%s), 0)", column)).Scan(&sum).Error
 	if err != nil {
 		return 0, err
 	}
@@ -652,7 +652,7 @@ func (srv *BaseService[T]) SumInt64(column string, conditions []Condition) (int6
 
 func (srv *BaseService[T]) SumFloat64(column string, conditions []Condition) (float64, error) {
 	var sum float64
-	err := srv.buildQuery(conditions).Select(fmt.Sprintf("SUM(%s)", column)).Scan(&sum).Error
+	err := srv.buildQuery(conditions).Select(fmt.Sprintf("COALESCE(SUM(%s), 0)", column)).Scan(&sum).Error
 	if err != nil {
 		return 0, err
 	}
@@ -662,7 +662,7 @@ func (srv *BaseService[T]) SumFloat64(column string, conditions []Condition) (fl
 
 func (srv *BaseService[T]) SumDecimal(column string, conditions []Condition) (decimal.Decimal, error) {
 	var sum decimal.Decimal
-	err := srv.buildQuery(conditions).Select(fmt.Sprintf("SUM(%s)", column)).Scan(&sum).Error
+	err := srv.buildQuery(conditions).Select(fmt.Sprintf("COALESCE(SUM(%s), 0)", column)).Scan(&sum).Error
 	if err != nil {
 		return decimal.Zero, err
 	}
