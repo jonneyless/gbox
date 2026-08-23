@@ -288,19 +288,32 @@ func (p *ConnectionPool) HealthCheck() error {
 }
 
 type Publisher struct {
-	pool    *ConnectionPool
-	wrapper *ConnectionWrapper
-	closed  bool
-	mu      sync.Mutex
-	log     *zap.SugaredLogger
+	pool        *ConnectionPool
+	wrapper     *ConnectionWrapper
+	closed      bool
+	mu          sync.Mutex
+	reconnectMu sync.Mutex
+	log         *zap.SugaredLogger
 }
 
 func (p *Publisher) Publish(exchange string, routingKeys []string, body []byte) error {
+	// 先快速检查，如果 closed 则尝试重连
 	p.mu.Lock()
-	defer p.mu.Unlock()
-
 	if p.closed {
-		return fmt.Errorf("publisher is closed")
+		p.mu.Unlock()
+		// 尝试重连
+		if err := p.reconnect(); err != nil {
+			return fmt.Errorf("publisher is closed and reconnect failed: %w", err)
+		}
+		// 重连成功，重新获取锁进入正常流程
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		// 双重检查
+		if p.closed {
+			return fmt.Errorf("publisher is closed")
+		}
+	} else {
+		defer p.mu.Unlock()
 	}
 
 	pub, err := p.wrapper.getPublisher(exchange)
@@ -314,6 +327,49 @@ func (p *Publisher) Publish(exchange string, routingKeys []string, body []byte) 
 		rabbitmq.WithPublishOptionsContentType("application/json"),
 		rabbitmq.WithPublishOptionsExchange(exchange),
 	)
+}
+
+func (p *Publisher) reconnect() error {
+	// 用独立的锁防止多个 goroutine 同时重连
+	p.reconnectMu.Lock()
+	defer p.reconnectMu.Unlock()
+
+	// 双重检查：可能其他 goroutine 已经重连成功了
+	p.mu.Lock()
+	if !p.closed {
+		p.mu.Unlock()
+		return nil
+	}
+	p.mu.Unlock()
+
+	p.log.Info("attempting to reconnect publisher")
+
+	// 从池子借一个新连接
+	newWrapper, err := p.pool.getConnection()
+	if err != nil {
+		p.log.Errorw("failed to get new connection for publisher", "error", err)
+		return err
+	}
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if !p.closed {
+		// 如果已经恢复了，把刚借的连接归还
+		p.pool.returnConnection(newWrapper)
+		return nil
+	}
+
+	// 替换 wrapper
+	oldWrapper := p.wrapper
+	p.wrapper = newWrapper
+	p.closed = false
+
+	// 注意：oldWrapper 不归还池子，因为它已经不可用了（被 Close 时已经归还过了）
+	// 但为了防止内存泄漏，可以置空
+	_ = oldWrapper
+
+	return nil
 }
 
 func (p *Publisher) Close() error {
