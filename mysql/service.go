@@ -710,106 +710,106 @@ func (srv *BaseService[T]) parseCondition(query *gorm.DB, cond Condition) *gorm.
 			value = cast.ToString(cond.Value)
 		}
 		if cond.IsOr {
-			query = query.Or(fmt.Sprintf("%s = ?", cond.Field), value)
+			query = query.Or(fmt.Sprintf("`%s` = ?", cond.Field), value)
 		} else {
-			query = query.Where(fmt.Sprintf("%s = ?", cond.Field), value)
+			query = query.Where(fmt.Sprintf("`%s` = ?", cond.Field), value)
 		}
 	case ">":
 		if cond.IsOr {
-			query = query.Or(fmt.Sprintf("%s > ?", cond.Field), cond.Value)
+			query = query.Or(fmt.Sprintf("`%s` > ?", cond.Field), cond.Value)
 		} else {
-			query = query.Where(fmt.Sprintf("%s > ?", cond.Field), cond.Value)
+			query = query.Where(fmt.Sprintf("`%s` > ?", cond.Field), cond.Value)
 		}
 	case ">=":
 		if cond.IsOr {
-			query = query.Or(fmt.Sprintf("%s >= ?", cond.Field), cond.Value)
+			query = query.Or(fmt.Sprintf("`%s` >= ?", cond.Field), cond.Value)
 		} else {
-			query = query.Where(fmt.Sprintf("%s >= ?", cond.Field), cond.Value)
+			query = query.Where(fmt.Sprintf("`%s` >= ?", cond.Field), cond.Value)
 		}
 	case "<":
 		if cond.IsOr {
-			query = query.Or(fmt.Sprintf("%s < ?", cond.Field), cond.Value)
+			query = query.Or(fmt.Sprintf("`%s` < ?", cond.Field), cond.Value)
 		} else {
-			query = query.Where(fmt.Sprintf("%s < ?", cond.Field), cond.Value)
+			query = query.Where(fmt.Sprintf("`%s` < ?", cond.Field), cond.Value)
 		}
 	case "<=":
 		if cond.IsOr {
-			query = query.Or(fmt.Sprintf("%s <= ?", cond.Field), cond.Value)
+			query = query.Or(fmt.Sprintf("`%s` <= ?", cond.Field), cond.Value)
 		} else {
-			query = query.Where(fmt.Sprintf("%s <= ?", cond.Field), cond.Value)
+			query = query.Where(fmt.Sprintf("`%s` <= ?", cond.Field), cond.Value)
 		}
 	case "!=", "<>":
 		if cond.IsOr {
-			query = query.Or(fmt.Sprintf("%s != ?", cond.Field), cond.Value)
+			query = query.Or(fmt.Sprintf("`%s` != ?", cond.Field), cond.Value)
 		} else {
-			query = query.Where(fmt.Sprintf("%s != ?", cond.Field), cond.Value)
+			query = query.Where(fmt.Sprintf("`%s` != ?", cond.Field), cond.Value)
 		}
 	case "LIKE":
 		if cond.IsOr {
-			query = query.Or(fmt.Sprintf("%s LIKE ?", cond.Field), cond.Value)
+			query = query.Or(fmt.Sprintf("`%s` LIKE ?", cond.Field), cond.Value)
 		} else {
-			query = query.Where(fmt.Sprintf("%s LIKE ?", cond.Field), cond.Value)
+			query = query.Where(fmt.Sprintf("`%s` LIKE ?", cond.Field), cond.Value)
 		}
 	case "IN":
 		if cond.IsOr {
-			query = query.Or(fmt.Sprintf("%s IN (?)", cond.Field), cond.Value)
+			query = query.Or(fmt.Sprintf("`%s` IN (?)", cond.Field), cond.Value)
 		} else {
-			query = query.Where(fmt.Sprintf("%s IN (?)", cond.Field), cond.Value)
+			query = query.Where(fmt.Sprintf("`%s` IN (?)", cond.Field), cond.Value)
 		}
 	case "NOT IN":
 		if cond.IsOr {
-			query = query.Or(fmt.Sprintf("%s NOT IN (?)", cond.Field), cond.Value)
+			query = query.Or(fmt.Sprintf("`%s` NOT IN (?)", cond.Field), cond.Value)
 		} else {
-			query = query.Where(fmt.Sprintf("%s NOT IN (?)", cond.Field), cond.Value)
+			query = query.Where(fmt.Sprintf("`%s` NOT IN (?)", cond.Field), cond.Value)
 		}
 	case "BETWEEN":
 		if values, ok := cond.Value.([]any); ok && len(values) == 2 {
 			if cond.IsOr {
-				query = query.Or(fmt.Sprintf("%s BETWEEN ? AND ?", cond.Field), values[0], values[1])
+				query = query.Or(fmt.Sprintf("`%s` BETWEEN ? AND ?", cond.Field), values[0], values[1])
 			} else {
-				query = query.Where(fmt.Sprintf("%s BETWEEN ? AND ?", cond.Field), values[0], values[1])
+				query = query.Where(fmt.Sprintf("`%s` BETWEEN ? AND ?", cond.Field), values[0], values[1])
 			}
 		}
 	case "IS NULL":
 		if cond.IsOr {
-			query = query.Or(fmt.Sprintf("%s IS NULL", cond.Field))
+			query = query.Or(fmt.Sprintf("`%s` IS NULL", cond.Field))
 		} else {
-			query = query.Where(fmt.Sprintf("%s IS NULL", cond.Field))
+			query = query.Where(fmt.Sprintf("`%s` IS NULL", cond.Field))
 		}
 	case "IS NOT NULL":
 		if cond.IsOr {
-			query = query.Or(fmt.Sprintf("%s IS NOT NULL", cond.Field))
+			query = query.Or(fmt.Sprintf("`%s` IS NOT NULL", cond.Field))
 		} else {
-			query = query.Where(fmt.Sprintf("%s IS NOT NULL", cond.Field))
+			query = query.Where(fmt.Sprintf("`%s` IS NOT NULL", cond.Field))
 		}
 	case "JSONB":
 		fields := strings.Split(cond.Field, ".")
 		if len(fields) == 1 {
 			if cond.IsOr {
-				query = query.Or(fmt.Sprintf("JSON_EXTRACT(%s, '$.\"%s\"') = ?", cond.Field, cast.ToString(cond.Value)), cond.Value)
+				query = query.Or(fmt.Sprintf("JSON_EXTRACT(`%s`, '$.\"%s\"') = ?", cond.Field, cast.ToString(cond.Value)), cond.Value)
 			} else {
-				query = query.Where(fmt.Sprintf("JSON_EXTRACT(%s, '$.\"%s\"') = ?", cond.Field, cast.ToString(cond.Value)), cond.Value)
+				query = query.Where(fmt.Sprintf("JSON_EXTRACT(`%s`, '$.\"%s\"') = ?", cond.Field, cast.ToString(cond.Value)), cond.Value)
 			}
 		}
 		if len(fields) == 2 {
 			if cond.IsOr {
-				query = query.Or(fmt.Sprintf("JSON_EXTRACT(%s, '$.\"%s\"') = ?", fields[0], fields[1]), cond.Value)
+				query = query.Or(fmt.Sprintf("JSON_EXTRACT(`%s`, '$.\"%s\"') = ?", fields[0], fields[1]), cond.Value)
 			} else {
-				query = query.Where(fmt.Sprintf("JSON_EXTRACT(%s, '$.\"%s\"') = ?", fields[0], fields[1]), cond.Value)
+				query = query.Where(fmt.Sprintf("JSON_EXTRACT(`%s`, '$.\"%s\"') = ?", fields[0], fields[1]), cond.Value)
 			}
 		}
 		if len(fields) == 3 {
 			if cond.IsOr {
-				query = query.Or(fmt.Sprintf("JSON_EXTRACT(%s, '$.\"%s\".\"%s\"') = ?", fields[0], fields[1], fields[2]), cond.Value)
+				query = query.Or(fmt.Sprintf("JSON_EXTRACT(`%s`, '$.\"%s\".\"%s\"') = ?", fields[0], fields[1], fields[2]), cond.Value)
 			} else {
-				query = query.Where(fmt.Sprintf("JSON_EXTRACT(%s, '$.\"%s\".\"%s\"') = ?", fields[0], fields[1], fields[2]), cond.Value)
+				query = query.Where(fmt.Sprintf("JSON_EXTRACT(`%s`, '$.\"%s\".\"%s\"') = ?", fields[0], fields[1], fields[2]), cond.Value)
 			}
 		}
 	default:
 		if cond.IsOr {
-			query = query.Or(fmt.Sprintf("%s = ?", cond.Field), cond.Value)
+			query = query.Or(fmt.Sprintf("`%s` = ?", cond.Field), cond.Value)
 		} else {
-			query = query.Where(fmt.Sprintf("%s = ?", cond.Field), cond.Value)
+			query = query.Where(fmt.Sprintf("`%s` = ?", cond.Field), cond.Value)
 		}
 	}
 
