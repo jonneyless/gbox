@@ -101,6 +101,10 @@ func (r *Redis) SetNX(key string, value any, expiration time.Duration) bool {
 	return r.client.SetNX(r.ctx, r.GetKey(key), value, expiration).Val()
 }
 
+func (r *Redis) TTL(key string) (time.Duration, error) {
+	return r.client.TTL(r.ctx, r.GetKey(key)).Result()
+}
+
 func (r *Redis) Get(key string) (string, error) {
 	return r.client.Get(r.ctx, r.GetKey(key)).Result()
 }
