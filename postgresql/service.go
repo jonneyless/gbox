@@ -193,6 +193,57 @@ func (srv *BaseService[T]) GetWithCacheConfig(id int64, config CacheConfig) (*T,
 	return item, nil
 }
 
+func (srv *BaseService[T]) GetOne(opts ...QueryOption) (*T, error) {
+	options := &QueryOptions{
+		Page:     0,
+		PageSize: 0,
+		Orders:   []QueryOrder{},
+		Select:   []string{},
+		Preload:  "",
+		Joins:    "",
+	}
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	var model *T
+
+	query := srv.getDB().Model(new(T))
+
+	if options.Preload != "" {
+		query = query.Preload(options.Preload, options.PreloadOpt...)
+	}
+
+	if len(options.Select) > 0 {
+		query = query.Select(options.Select)
+	}
+
+	if options.Joins != "" {
+		query = query.Joins(options.Joins)
+	}
+
+	if len(options.Orders) > 0 {
+		for _, order := range options.Orders {
+			if order.Expression != nil {
+				query = query.Order(order.Expression)
+			} else {
+				if order.Descending {
+					query = query.Order(order.OrderBy + " DESC")
+				} else {
+					query = query.Order(order.OrderBy + " ASC")
+				}
+			}
+		}
+	}
+
+	err := query.First(&model).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return model, nil
+}
+
 func (srv *BaseService[T]) GetByField(field string, value any, opts ...QueryOption) (*T, error) {
 	return srv.GetByCondition([]Condition{{Field: field, Value: value}}, opts...)
 }
