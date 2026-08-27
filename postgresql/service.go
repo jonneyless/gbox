@@ -249,10 +249,6 @@ func (srv *BaseService[T]) GetByField(field string, value any, opts ...QueryOpti
 }
 
 func (srv *BaseService[T]) GetByCondition(conditions []Condition, opts ...QueryOption) (*T, error) {
-	if len(conditions) == 0 {
-		return nil, fmt.Errorf("no conditions provided")
-	}
-
 	options := &QueryOptions{
 		Page:     0,
 		PageSize: 0,
@@ -320,10 +316,6 @@ func (srv *BaseService[T]) PluckInt64(column string, conditions []Condition) ([]
 }
 
 func (srv *BaseService[T]) Find(conditions []Condition, opts ...QueryOption) ([]*T, error) {
-	if len(conditions) == 0 {
-		return nil, fmt.Errorf("no conditions provided")
-	}
-
 	options := &QueryOptions{
 		Page:     0,
 		PageSize: 0,
@@ -656,10 +648,6 @@ func (srv *BaseService[T]) ExistsByCondition(conditions []Condition) (bool, erro
 }
 
 func (srv *BaseService[T]) CountByCondition(conditions []Condition) (int64, error) {
-	if len(conditions) == 0 {
-		return 0, fmt.Errorf("no conditions provided")
-	}
-
 	var count int64
 
 	err := srv.buildQuery(conditions).Count(&count).Error
