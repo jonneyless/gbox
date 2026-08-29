@@ -8,6 +8,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"slices"
 	"sort"
 	"strings"
 	"unicode"
@@ -236,4 +237,27 @@ func SafeString(m map[string]any, key string) string {
 		return v
 	}
 	return ""
+}
+
+func EqualListInt64(a, b []int64) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	// 复制并排序
+	aCopy := make([]int64, len(a))
+	bCopy := make([]int64, len(b))
+	copy(aCopy, a)
+	copy(bCopy, b)
+
+	slices.Sort(aCopy)
+	slices.Sort(bCopy)
+
+	// 直接比较每个元素
+	for i := range aCopy {
+		if aCopy[i] != bCopy[i] {
+			return false
+		}
+	}
+	return true
 }

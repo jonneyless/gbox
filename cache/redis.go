@@ -89,6 +89,26 @@ func (r *Redis) Mutex(key string) *redsync.Mutex {
 	)
 }
 
+func (r *Redis) NewScript(lua string) *redis.Script {
+	return redis.NewScript(lua)
+}
+
+func (r *Redis) RunScript(script *redis.Script, key string, args ...any) (any, error) {
+	return script.Run(r.ctx, r.client, []string{r.GetKey(key)}, args...).Result()
+}
+
+func (r *Redis) ScriptLoad(lua string) (string, error) {
+	return r.client.ScriptLoad(r.ctx, lua).Result()
+}
+
+func (r *Redis) Eval(lua string, key string, args ...any) (any, error) {
+	return r.client.Eval(r.ctx, lua, []string{r.GetKey(key)}, args...).Result()
+}
+
+func (r *Redis) EvalSha(sha1 string, key string, args ...any) (any, error) {
+	return r.client.EvalSha(r.ctx, sha1, []string{r.GetKey(key)}, args...).Result()
+}
+
 func (r *Redis) GetKey(key string) string {
 	return fmt.Sprintf("%s:%s", r.prefix, key)
 }
