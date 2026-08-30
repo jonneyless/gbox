@@ -834,9 +834,9 @@ func (srv *BaseService[T]) parseCondition(query *gorm.DB, cond Condition) *gorm.
 		fields := strings.Split(cond.Field, ".")
 		if len(fields) == 1 {
 			if cond.IsOr {
-				query = query.Or(fmt.Sprintf("%s @> ?", cond.Field), fmt.Sprintf(`{%s}`, cast.ToString(cond.Value)))
+				query = query.Or(fmt.Sprintf("%s @> ?", cond.Field), fmt.Sprintf(`%s`, cast.ToString(cond.Value)))
 			} else {
-				query = query.Where(fmt.Sprintf("%s @> ?", cond.Field), fmt.Sprintf(`{%s}`, cast.ToString(cond.Value)))
+				query = query.Where(fmt.Sprintf("%s @> ?", cond.Field), fmt.Sprintf(`%s`, cast.ToString(cond.Value)))
 			}
 		}
 		if len(fields) == 2 {
