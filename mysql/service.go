@@ -23,6 +23,7 @@ type BaseService[T any] struct {
 	Prefix    string
 	TableName string
 	readOnly  bool
+	tx        *gorm.DB
 	cache     *cache.Redis
 }
 
@@ -123,7 +124,18 @@ func (srv *BaseService[T]) ReadOnly() *BaseService[T] {
 	return srv
 }
 
+func (srv *BaseService[T]) ByTx(tx *gorm.DB) *BaseService[T] {
+	srv.tx = tx
+	return srv
+}
+
 func (srv *BaseService[T]) getDB() *gorm.DB {
+	if srv.tx != nil {
+		tx := srv.tx
+		srv.tx = nil
+		return tx
+	}
+
 	if srv.readOnly {
 		srv.readOnly = false
 		return DBRead()
