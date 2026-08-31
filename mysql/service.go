@@ -217,8 +217,8 @@ func (srv *BaseService[T]) GetOne(opts ...QueryOption) (*T, error) {
 		query = query.Select(options.Select)
 	}
 
-	if options.Joins != nil {
-		if options.Joins[1] != nil {
+	if len(options.Joins) > 0 {
+		if len(options.Joins) == 2 {
 			query = query.Joins(options.Joins[0].(string), options.Joins[1].([]any)...)
 		} else {
 			query = query.Joins(options.Joins[0].(string))
@@ -276,8 +276,8 @@ func (srv *BaseService[T]) GetByCondition(conditions []Condition, opts ...QueryO
 		query = query.Select(options.Select)
 	}
 
-	if options.Joins != nil {
-		if options.Joins[1] != nil {
+	if len(options.Joins) > 0 {
+		if len(options.Joins) == 2 {
 			query = query.Joins(options.Joins[0].(string), options.Joins[1].([]any)...)
 		} else {
 			query = query.Joins(options.Joins[0].(string))
