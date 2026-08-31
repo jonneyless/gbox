@@ -42,7 +42,7 @@ type Condition struct {
 type QueryOptions struct {
 	Preload    string
 	PreloadOpt []any
-	Joins      string
+	Joins      []any
 	Orders     []QueryOrder
 	Select     []string
 	Page       int
@@ -89,9 +89,9 @@ func WithPreload(table string, opt ...any) QueryOption {
 	}
 }
 
-func WithJoins(joins string) QueryOption {
+func WithJoins(joins string, args ...any) QueryOption {
 	return func(o *QueryOptions) {
-		o.Joins = joins
+		o.Joins = []any{joins, args}
 	}
 }
 
@@ -217,8 +217,12 @@ func (srv *BaseService[T]) GetOne(opts ...QueryOption) (*T, error) {
 		query = query.Select(options.Select)
 	}
 
-	if options.Joins != "" {
-		query = query.Joins(options.Joins)
+	if options.Joins != nil {
+		if options.Joins[1] != nil {
+			query = query.Joins(options.Joins[0].(string), options.Joins[1].([]any)...)
+		} else {
+			query = query.Joins(options.Joins[0].(string))
+		}
 	}
 
 	if len(options.Orders) > 0 {
