@@ -345,8 +345,8 @@ func (srv *BaseService[T]) Find(conditions []Condition, opts ...QueryOption) ([]
 		query = query.Select(options.Select)
 	}
 
-	if options.Joins != nil {
-		if options.Joins[1] != nil {
+	if len(options.Joins) > 0 {
+		if len(options.Joins) == 2 {
 			query = query.Joins(options.Joins[0].(string), options.Joins[1].([]any)...)
 		} else {
 			query = query.Joins(options.Joins[0].(string))
