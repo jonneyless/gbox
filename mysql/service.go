@@ -199,7 +199,7 @@ func (srv *BaseService[T]) GetOne(opts ...QueryOption) (*T, error) {
 		Orders:   []QueryOrder{},
 		Select:   []string{},
 		Preload:  "",
-		Joins:    "",
+		Joins:    []any{},
 	}
 	for _, opt := range opts {
 		opt(options)
@@ -258,7 +258,7 @@ func (srv *BaseService[T]) GetByCondition(conditions []Condition, opts ...QueryO
 		Orders:   []QueryOrder{},
 		Select:   []string{},
 		Preload:  "",
-		Joins:    "",
+		Joins:    []any{},
 	}
 	for _, opt := range opts {
 		opt(options)
@@ -276,8 +276,12 @@ func (srv *BaseService[T]) GetByCondition(conditions []Condition, opts ...QueryO
 		query = query.Select(options.Select)
 	}
 
-	if options.Joins != "" {
-		query = query.Joins(options.Joins)
+	if options.Joins != nil {
+		if options.Joins[1] != nil {
+			query = query.Joins(options.Joins[0].(string), options.Joins[1].([]any)...)
+		} else {
+			query = query.Joins(options.Joins[0].(string))
+		}
 	}
 
 	if len(options.Orders) > 0 {
@@ -325,7 +329,7 @@ func (srv *BaseService[T]) Find(conditions []Condition, opts ...QueryOption) ([]
 		Orders:   []QueryOrder{},
 		Select:   []string{},
 		Preload:  "",
-		Joins:    "",
+		Joins:    []any{},
 	}
 	for _, opt := range opts {
 		opt(options)
@@ -341,8 +345,12 @@ func (srv *BaseService[T]) Find(conditions []Condition, opts ...QueryOption) ([]
 		query = query.Select(options.Select)
 	}
 
-	if options.Joins != "" {
-		query = query.Joins(options.Joins)
+	if options.Joins != nil {
+		if options.Joins[1] != nil {
+			query = query.Joins(options.Joins[0].(string), options.Joins[1].([]any)...)
+		} else {
+			query = query.Joins(options.Joins[0].(string))
+		}
 	}
 
 	if len(options.Orders) > 0 {
