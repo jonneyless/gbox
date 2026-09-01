@@ -859,20 +859,28 @@ func (srv *BaseService[T]) parseCondition(query *gorm.DB, cond Condition) *gorm.
 		} else {
 			query = query.Where(fmt.Sprintf("`%s` IS NOT NULL", cond.Field))
 		}
-	case "JSONB":
+	case "JSON":
 		fields := strings.Split(cond.Field, ".")
 		if len(fields) == 1 {
 			if cond.IsOr {
-				query = query.Or(fmt.Sprintf("JSON_EXTRACT(`%s`, '$.\"%s\"') = ?", cond.Field, cast.ToString(cond.Value)), cond.Value)
+				query = query.Or(fmt.Sprintf("JSON_CONTAINS(`%s`, ?)", cond.Field), cond.Value)
 			} else {
-				query = query.Where(fmt.Sprintf("JSON_EXTRACT(`%s`, '$.\"%s\"') = ?", cond.Field, cast.ToString(cond.Value)), cond.Value)
+				query = query.Where(fmt.Sprintf("JSON_CONTAINS(`%s`, ?)", cond.Field), cond.Value)
 			}
 		}
 		if len(fields) == 2 {
-			if cond.IsOr {
-				query = query.Or(fmt.Sprintf("JSON_EXTRACT(`%s`, '$.\"%s\"') = ?", fields[0], fields[1]), cond.Value)
+			if strings.ToUpper(cast.ToString(cond.Value)) == "NOT NULL" {
+				if cond.IsOr {
+					query = query.Or(fmt.Sprintf("JSON_EXTRACT(`%s`, '$.\"%s\"') IS NOT NULL", fields[0], fields[1]))
+				} else {
+					query = query.Where(fmt.Sprintf("JSON_EXTRACT(`%s`, '$.\"%s\"') IS NOT NULL", fields[0], fields[1]))
+				}
 			} else {
-				query = query.Where(fmt.Sprintf("JSON_EXTRACT(`%s`, '$.\"%s\"') = ?", fields[0], fields[1]), cond.Value)
+				if cond.IsOr {
+					query = query.Or(fmt.Sprintf("JSON_EXTRACT(`%s`, '$.\"%s\"') = ?", fields[0], fields[1]), cond.Value)
+				} else {
+					query = query.Where(fmt.Sprintf("JSON_EXTRACT(`%s`, '$.\"%s\"') = ?", fields[0], fields[1]), cond.Value)
+				}
 			}
 		}
 		if len(fields) == 3 {
