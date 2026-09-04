@@ -868,9 +868,9 @@ func (srv *BaseService[T]) parseCondition(query *gorm.DB, cond Condition) *gorm.
 		fields := strings.Split(cond.Field, ".")
 		if len(fields) == 1 {
 			if cond.IsOr {
-				query = query.Or(fmt.Sprintf("JSON_CONTAINS(`%s`, ?)", cond.Field), cond.Value)
+				query = query.Or(fmt.Sprintf("JSON_CONTAINS(`%s`, ?)", cond.Field), cast.ToString(cond.Value))
 			} else {
-				query = query.Where(fmt.Sprintf("JSON_CONTAINS(`%s`, ?)", cond.Field), cond.Value)
+				query = query.Where(fmt.Sprintf("JSON_CONTAINS(`%s`, ?)", cond.Field), cast.ToString(cond.Value))
 			}
 		}
 		if len(fields) == 2 {
