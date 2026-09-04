@@ -149,6 +149,16 @@ func (srv *BaseService[T]) getDB() *gorm.DB {
 	return DB()
 }
 
+func (srv *BaseService[T]) getDBWithoutReadOnly() *gorm.DB {
+	if srv.tx != nil {
+		tx := srv.tx
+		srv.tx = nil
+		return tx
+	}
+
+	return DB()
+}
+
 func (srv *BaseService[T]) WithTransaction(fn func(tx *gorm.DB) error) error {
 	return DB().Transaction(fn)
 }
@@ -517,7 +527,7 @@ func (srv *BaseService[T]) UpdateByCondition(conditions []Condition, updates map
 
 	var ids []int64
 	rows := int64(0)
-	err := srv.getDB().Transaction(func(tx *gorm.DB) error {
+	err := DB().Transaction(func(tx *gorm.DB) error {
 		if srv.Prefix != "" {
 			if err := srv.buildQueryWithTx(tx, conditions).Clauses(clause.Locking{Strength: "UPDATE"}).Pluck("id", &ids).Error; err != nil {
 				return err
@@ -628,7 +638,7 @@ func (srv *BaseService[T]) DeleteByCondition(conditions []Condition) (int64, err
 }
 
 func (srv *BaseService[T]) ForceDelete(id int64) error {
-	err := srv.getDB().Transaction(func(tx *gorm.DB) error {
+	err := DB().Transaction(func(tx *gorm.DB) error {
 		if err := tx.Unscoped().Delete(new(T), id).Error; err != nil {
 			return err
 		}
@@ -643,7 +653,7 @@ func (srv *BaseService[T]) ForceDelete(id int64) error {
 }
 
 func (srv *BaseService[T]) ForceDeleteBatch(ids []int64) error {
-	err := srv.getDB().Transaction(func(tx *gorm.DB) error {
+	err := DB().Transaction(func(tx *gorm.DB) error {
 		if err := tx.Unscoped().Delete(new(T), ids).Error; err != nil {
 			return err
 		}
@@ -658,7 +668,7 @@ func (srv *BaseService[T]) ForceDeleteBatch(ids []int64) error {
 }
 
 func (srv *BaseService[T]) Restore(id int64) error {
-	err := srv.getDB().Transaction(func(tx *gorm.DB) error {
+	err := DB().Transaction(func(tx *gorm.DB) error {
 		if err := tx.Unscoped().Model(new(T)).Where("id = ?", id).Update("deleted_at", nil).Error; err != nil {
 			return err
 		}

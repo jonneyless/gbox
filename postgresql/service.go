@@ -130,6 +130,11 @@ func (srv *BaseService[T]) ByTx(tx *gorm.DB) *BaseService[T] {
 	return srv
 }
 
+func (srv *BaseService[T]) CleanTx() *BaseService[T] {
+	srv.tx = nil
+	return srv
+}
+
 func (srv *BaseService[T]) getDB() *gorm.DB {
 	if srv.tx != nil {
 		tx := srv.tx
@@ -140,6 +145,16 @@ func (srv *BaseService[T]) getDB() *gorm.DB {
 	if srv.readOnly {
 		srv.readOnly = false
 		return DBRead()
+	}
+
+	return DB()
+}
+
+func (srv *BaseService[T]) getDBWithoutReadOnly() *gorm.DB {
+	if srv.tx != nil {
+		tx := srv.tx
+		srv.tx = nil
+		return tx
 	}
 
 	return DB()
@@ -389,7 +404,7 @@ func (srv *BaseService[T]) FindAll() ([]*T, error) {
 }
 
 func (srv *BaseService[T]) Create(model *T) error {
-	err := DB().Create(model).Error
+	err := srv.getDBWithoutReadOnly().Create(model).Error
 	if err != nil {
 		return err
 	}
@@ -406,7 +421,7 @@ func (srv *BaseService[T]) CreateBatch(models []*T, batchSize int) error {
 		return fmt.Errorf("batch size must be greater than zero")
 	}
 
-	err := DB().CreateInBatches(models, batchSize).Error
+	err := srv.getDBWithoutReadOnly().CreateInBatches(models, batchSize).Error
 	if err != nil {
 		return err
 	}
@@ -415,7 +430,7 @@ func (srv *BaseService[T]) CreateBatch(models []*T, batchSize int) error {
 }
 
 func (srv *BaseService[T]) CreateAndGetId(model *T) (int64, error) {
-	err := DB().Create(model).Error
+	err := srv.getDBWithoutReadOnly().Create(model).Error
 	if err != nil {
 		return 0, err
 	}
@@ -438,9 +453,9 @@ func (srv *BaseService[T]) UpdateJson(id int64, field string, jsonKey string, va
 	var err error
 	if value == nil {
 		sql := fmt.Sprintf("UPDATE %s SET %s = %s - $1::text WHERE id = $2", srv.TableName, field, field)
-		err = DB().Exec(sql, jsonKey, id).Error
+		err = srv.getDBWithoutReadOnly().Exec(sql, jsonKey, id).Error
 	} else {
-		err = DB().Model(new(T)).Where("id = ?", id).UpdateColumn(field, datatypes.JSONSet(field).Set(fmt.Sprintf("{%s}", jsonKey), value)).Error
+		err = srv.getDBWithoutReadOnly().Model(new(T)).Where("id = ?", id).UpdateColumn(field, datatypes.JSONSet(field).Set(fmt.Sprintf("{%s}", jsonKey), value)).Error
 	}
 	if err != nil {
 		return err
@@ -452,7 +467,7 @@ func (srv *BaseService[T]) UpdateJson(id int64, field string, jsonKey string, va
 }
 
 func (srv *BaseService[T]) UpdateField(id int64, field string, value any) error {
-	err := DB().Model(new(T)).Where("id = ?", id).UpdateColumn(field, value).Error
+	err := srv.getDBWithoutReadOnly().Model(new(T)).Where("id = ?", id).UpdateColumn(field, value).Error
 	if err != nil {
 		return err
 	}
@@ -467,7 +482,7 @@ func (srv *BaseService[T]) Update(id int64, updates map[string]any) error {
 		return fmt.Errorf("no updates provided")
 	}
 
-	err := DB().Model(new(T)).Where("id = ?", id).Updates(updates).Error
+	err := srv.getDBWithoutReadOnly().Model(new(T)).Where("id = ?", id).Updates(updates).Error
 	if err != nil {
 		return err
 	}
@@ -478,7 +493,7 @@ func (srv *BaseService[T]) Update(id int64, updates map[string]any) error {
 }
 
 func (srv *BaseService[T]) UpdateModel(id int64, model *T) error {
-	err := DB().Where("id = ?", id).Save(model).Error
+	err := srv.getDBWithoutReadOnly().Where("id = ?", id).Save(model).Error
 	if err != nil {
 		return err
 	}
@@ -554,7 +569,7 @@ func (srv *BaseService[T]) Reduce(id int64, field string, value any) error {
 }
 
 func (srv *BaseService[T]) Delete(id int64) error {
-	err := DB().Delete(new(T), id).Error
+	err := srv.getDBWithoutReadOnly().Delete(new(T), id).Error
 	if err != nil {
 		return err
 	}
@@ -569,7 +584,7 @@ func (srv *BaseService[T]) DeleteBatch(ids []int64) error {
 		return fmt.Errorf("no ids provided")
 	}
 
-	err := DB().Delete(new(T), ids).Error
+	err := srv.getDBWithoutReadOnly().Delete(new(T), ids).Error
 	if err != nil {
 		return err
 	}
