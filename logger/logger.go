@@ -71,8 +71,9 @@ func InitLogger(cfg *ZapConfig) *zap.SugaredLogger {
 
 func NewLoggerByPath(path string) *zap.SugaredLogger {
 	cfg := zapConfig
+	cfg.Writer = logConfig.WriteFile
 	cfg.LogFile.SetOutput(path)
-	encoder := zapEncoder(cfg)
+	encoder := zapSimpleEncoder(cfg)
 	levelEnabler := zapLevelEnabler(cfg)
 	subCore, options := tee(cfg, encoder, levelEnabler)
 	logger := zap.New(subCore, options...)
@@ -104,6 +105,35 @@ func zapEncoder(cfg *ZapConfig) zapcore.Encoder {
 	encoderConfig.EncodeLevel = levelEncoder
 	encoderConfig.EncodeDuration = zapcore.SecondsDurationEncoder
 	//encoderConfig.EncodeCaller = zapcore.ShortCallerEncoder
+	encoderConfig.EncodeName = zapcore.FullNameEncoder
+	switch cfg.Encode {
+	case "json":
+		{
+			return zapcore.NewJSONEncoder(encoderConfig)
+		}
+	case "console":
+		{
+			return zapcore.NewConsoleEncoder(encoderConfig)
+		}
+	}
+
+	return zapcore.NewConsoleEncoder(encoderConfig)
+}
+
+func zapSimpleEncoder(cfg *ZapConfig) zapcore.Encoder {
+	encoderConfig := zapcore.EncoderConfig{
+		TimeKey:       "Time",
+		LevelKey:      "Level",
+		NameKey:       "Logger",
+		MessageKey:    "Data",
+		StacktraceKey: "StackTrace",
+		LineEnding:    zapcore.DefaultLineEnding,
+		FunctionKey:   zapcore.OmitKey,
+	}
+	encoderConfig.ConsoleSeparator = " "
+	encoderConfig.EncodeTime = timeFormatEncoder
+	encoderConfig.EncodeLevel = levelSimpleEncoder
+	encoderConfig.EncodeDuration = zapcore.SecondsDurationEncoder
 	encoderConfig.EncodeName = zapcore.FullNameEncoder
 	switch cfg.Encode {
 	case "json":
@@ -214,4 +244,29 @@ func levelEncoder(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
 	}
 
 	enc.AppendString(fmt.Sprintf("%s%-5s\033[0m", colorCode, levelStr))
+}
+
+func levelSimpleEncoder(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
+	var levelStr string
+
+	switch level {
+	case zapcore.DebugLevel:
+		levelStr = "[DEBUG]"
+	case zapcore.InfoLevel:
+		levelStr = "[INFO]"
+	case zapcore.WarnLevel:
+		levelStr = "[WARN]"
+	case zapcore.ErrorLevel:
+		levelStr = "[ERROR]"
+	case zapcore.DPanicLevel:
+		levelStr = "[DPANIC]"
+	case zapcore.PanicLevel:
+		levelStr = "[PANIC]"
+	case zapcore.FatalLevel:
+		levelStr = "[FATAL]"
+	default:
+		levelStr = fmt.Sprintf("[%s]", level.String())
+	}
+
+	enc.AppendString(fmt.Sprintf("%-8s", levelStr))
 }
