@@ -161,6 +161,14 @@ func (r *Redis) HDel(key string, fields ...string) (int64, error) {
 	return r.client.HDel(r.ctx, r.GetKey(key), fields...).Result()
 }
 
+func (r *Redis) HKeys(key string) ([]string, error) {
+	return r.client.HKeys(r.ctx, r.GetKey(key)).Result()
+}
+
+func (r *Redis) HExists(key string, field string) (bool, error) {
+	return r.client.HExists(r.ctx, r.GetKey(key), field).Result()
+}
+
 func (r *Redis) Exists(key string) (int64, error) {
 	return r.client.Exists(r.ctx, r.GetKey(key)).Result()
 }
