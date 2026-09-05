@@ -2,9 +2,7 @@ package logger
 
 import (
 	"fmt"
-	"io"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/natefinch/lumberjack"
@@ -40,7 +38,6 @@ var zapConfig *ZapConfig
 var zapLogger *zap.SugaredLogger
 
 type ZapConfig struct {
-	TimeFormat string         `mapstructure:"time_format" json:"time_format" yaml:"time_format" toml:"time_format"`
 	Level      string         `mapstructure:"level" json:"level" yaml:"level" toml:"level"`
 	Caller     bool           `mapstructure:"caller" json:"caller" yaml:"caller" toml:"caller"`
 	StackTrace bool           `mapstructure:"stack_trace" json:"stack_trace" yaml:"stack_trace" toml:"stack_trace"`
@@ -57,78 +54,27 @@ type LogFileConfig struct {
 	Errput   []string `mapstructure:"errput" json:"errput" yaml:"errput" toml:"errput"`
 }
 
-var dynamicSyncer *DynamicWriteSyncer
-
 func InitLogger(cfg *ZapConfig) *zap.SugaredLogger {
 	zapConfig = cfg
 	encoder := zapEncoder(cfg)
 	levelEnabler := zapLevelEnabler(cfg)
-
-	dynamicSyncer = NewDynamicWriteSyncer()
-
-	defaultSyncers := getDefaultSyncers(cfg)
-	for _, syncer := range defaultSyncers {
-		dynamicSyncer.Append(syncer)
-	}
-
-	core := zapcore.NewCore(encoder, dynamicSyncer, levelEnabler)
-	logger := zap.New(core, buildOptions(cfg, levelEnabler)...)
+	subCore, options := tee(cfg, encoder, levelEnabler)
+	logger := zap.New(subCore, options...)
 	zapLogger = logger.Sugar()
 	return zapLogger
 }
 
-func getDefaultSyncers(cfg *ZapConfig) []zapcore.WriteSyncer {
-	syncers := make([]zapcore.WriteSyncer, 0)
-
-	if cfg.Writer == logConfig.WriteBoth || cfg.Writer == logConfig.WriteConsole {
-		syncers = append(syncers, zapcore.AddSync(os.Stdout))
-	}
-
-	if cfg.Writer == logConfig.WriteBoth || cfg.Writer == logConfig.WriteFile {
-		for _, path := range cfg.LogFile.Output {
-			logger := &lumberjack.Logger{
-				Filename:   path,
-				MaxSize:    cfg.LogFile.MaxSize,
-				MaxBackups: cfg.LogFile.BackUps,
-				Compress:   cfg.LogFile.Compress,
-				LocalTime:  true,
-			}
-			syncers = append(syncers, zapcore.Lock(zapcore.AddSync(logger)))
-		}
-	}
-
-	return syncers
+func NewLogger(cfg *ZapConfig) *zap.SugaredLogger {
+	encoder := zapEncoder(cfg)
+	levelEnabler := zapLevelEnabler(cfg)
+	subCore, options := tee(cfg, encoder, levelEnabler)
+	logger := zap.New(subCore, options...)
+	zapLogger = logger.Sugar()
+	return zapLogger
 }
 
-func AppendOutput(path string) error {
-	if dynamicSyncer == nil {
-		return fmt.Errorf("logger not initialized or dynamic syncer not available")
-	}
-
-	var syncer zapcore.WriteSyncer
-	if path == "stdout" {
-		syncer = zapcore.AddSync(os.Stdout)
-	} else if path == "stderr" {
-		syncer = zapcore.AddSync(os.Stderr)
-	} else {
-		syncer = zapcore.Lock(zapcore.AddSync(&lumberjack.Logger{
-			Filename:   path,
-			MaxSize:    zapConfig.LogFile.MaxSize,
-			MaxBackups: zapConfig.LogFile.BackUps,
-			Compress:   zapConfig.LogFile.Compress,
-			LocalTime:  true,
-		}))
-	}
-
-	dynamicSyncer.Append(syncer)
-	return nil
-}
-
-func RemoveLastOutput() error {
-	if dynamicSyncer == nil {
-		return fmt.Errorf("logger not initialized")
-	}
-	return dynamicSyncer.Remove()
+func GetConfig() *ZapConfig {
+	return zapConfig
 }
 
 func GetLogger() *zap.SugaredLogger {
@@ -227,7 +173,7 @@ func buildOptions(cfg *ZapConfig, levelEnabler zapcore.LevelEnabler) (options []
 }
 
 func timeFormatEncoder(t time.Time, encoder zapcore.PrimitiveArrayEncoder) {
-	encoder.AppendString(t.Format(zapConfig.TimeFormat))
+	encoder.AppendString(t.Format(time.DateTime))
 }
 
 func levelEncoder(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
@@ -262,128 +208,4 @@ func levelEncoder(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
 	}
 
 	enc.AppendString(fmt.Sprintf("%s%-5s\033[0m", colorCode, levelStr))
-}
-
-type DynamicWriteSyncer struct {
-	syncers []zapcore.WriteSyncer
-	mu      sync.RWMutex
-}
-
-func NewDynamicWriteSyncer(initial ...zapcore.WriteSyncer) *DynamicWriteSyncer {
-	return &DynamicWriteSyncer{
-		syncers: initial,
-	}
-}
-
-func (d *DynamicWriteSyncer) Write(p []byte) (n int, err error) {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-
-	for _, syncer := range d.syncers {
-		if _, err := syncer.Write(p); err != nil {
-			// 可以添加错误日志
-		}
-	}
-	return len(p), nil
-}
-
-func (d *DynamicWriteSyncer) Sync() error {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-
-	var lastErr error
-	for _, syncer := range d.syncers {
-		if err := syncer.Sync(); err != nil {
-			lastErr = err
-		}
-	}
-	return lastErr
-}
-
-func (d *DynamicWriteSyncer) Append(syncer zapcore.WriteSyncer) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	d.syncers = append(d.syncers, syncer)
-}
-
-func (d *DynamicWriteSyncer) AppendPath(path string) error {
-	syncer, err := createWriteSyncer(path)
-	if err != nil {
-		return err
-	}
-	d.Append(syncer)
-	return nil
-}
-
-func (d *DynamicWriteSyncer) Remove() error {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
-	if len(d.syncers) == 0 {
-		return fmt.Errorf("no write syncer to remove")
-	}
-
-	removed := d.syncers[len(d.syncers)-1]
-	d.syncers = d.syncers[:len(d.syncers)-1]
-
-	if closer, ok := removed.(io.Closer); ok {
-		return closer.Close()
-	}
-	return nil
-}
-
-func (d *DynamicWriteSyncer) RemoveByIndex(index int) error {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
-	if index < 0 || index >= len(d.syncers) {
-		return fmt.Errorf("index %d out of range [0, %d)", index, len(d.syncers))
-	}
-
-	removed := d.syncers[index]
-	d.syncers = append(d.syncers[:index], d.syncers[index+1:]...)
-
-	if closer, ok := removed.(io.Closer); ok {
-		return closer.Close()
-	}
-	return nil
-}
-
-func (d *DynamicWriteSyncer) Len() int {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-	return len(d.syncers)
-}
-
-func (d *DynamicWriteSyncer) Clear() error {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
-	var lastErr error
-	for _, syncer := range d.syncers {
-		if closer, ok := syncer.(io.Closer); ok {
-			if err := closer.Close(); err != nil {
-				lastErr = err
-			}
-		}
-	}
-	d.syncers = d.syncers[:0]
-	return lastErr
-}
-
-func createWriteSyncer(path string) (zapcore.WriteSyncer, error) {
-	if path == "stdout" {
-		return zapcore.AddSync(os.Stdout), nil
-	}
-	if path == "stderr" {
-		return zapcore.AddSync(os.Stderr), nil
-	}
-
-	return zapcore.Lock(zapcore.AddSync(&lumberjack.Logger{
-		Filename:   path,
-		MaxSize:    zapConfig.LogFile.MaxSize,
-		MaxBackups: zapConfig.LogFile.BackUps,
-		Compress:   zapConfig.LogFile.Compress,
-		LocalTime:  true,
-	})), nil
 }
