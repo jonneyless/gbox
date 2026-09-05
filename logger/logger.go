@@ -76,8 +76,7 @@ func NewLoggerByPath(path string) *zap.SugaredLogger {
 	levelEnabler := zapLevelEnabler(cfg)
 	subCore, options := tee(cfg, encoder, levelEnabler)
 	logger := zap.New(subCore, options...)
-	zapLogger = logger.Sugar()
-	return zapLogger
+	return logger.Sugar()
 }
 
 func GetConfig() *ZapConfig {
