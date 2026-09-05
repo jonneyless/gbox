@@ -3,6 +3,7 @@ package logger
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/natefinch/lumberjack"
@@ -54,6 +55,10 @@ type LogFileConfig struct {
 	Errput   []string `mapstructure:"errput" json:"errput" yaml:"errput" toml:"errput"`
 }
 
+func (l *LogFileConfig) SetOutput(output string) {
+	l.Output = strings.Split(output, ",")
+}
+
 func InitLogger(cfg *ZapConfig) *zap.SugaredLogger {
 	zapConfig = cfg
 	encoder := zapEncoder(cfg)
@@ -64,7 +69,9 @@ func InitLogger(cfg *ZapConfig) *zap.SugaredLogger {
 	return zapLogger
 }
 
-func NewLogger(cfg *ZapConfig) *zap.SugaredLogger {
+func NewLoggerByPath(path string) *zap.SugaredLogger {
+	cfg := zapConfig
+	cfg.LogFile.SetOutput(path)
 	encoder := zapEncoder(cfg)
 	levelEnabler := zapLevelEnabler(cfg)
 	subCore, options := tee(cfg, encoder, levelEnabler)
