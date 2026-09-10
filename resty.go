@@ -64,7 +64,6 @@ func NewRestyClient(cfg *RestyConfig) *resty.Client {
 		// 记录请求信息
 		if cfg.Debug {
 			cfg.Logger.Debug(fmt.Sprintf("Response: %d %s (took %v)", resp.StatusCode(), resp.Request.URL, elapsed))
-			cfg.Logger.Debug(fmt.Sprintf("Response Headers：%s", formatRequestBody(resp.Header())))
 			if resp.Body() != nil && len(resp.Body()) > 0 {
 				cfg.Logger.Debug(fmt.Sprintf("Response Body: %s", formatRequestBody(resp.Body())))
 			}
