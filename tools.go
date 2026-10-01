@@ -90,15 +90,18 @@ func IsOtherLanguageChar(r rune) bool {
 	if unicode.IsLetter(r) && (r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
 		return false
 	}
-	// 中文（基本块）
-	if r >= 0x4e00 && r <= 0x9fff {
+	// 中日文
+	if unicode.Is(unicode.Han, r) ||
+		unicode.Is(unicode.Hiragana, r) ||
+		unicode.Is(unicode.Katakana, r) ||
+		unicode.Is(unicode.Ideographic, r) {
 		return false
 	}
 	// Emoji
 	if IsEmoji(r) {
 		return false
 	}
-	// 其他语言（如日文平假名、韩文、阿拉伯文等）
+	// 其他语言（韩文、阿拉伯文等）
 	return true
 }
 
