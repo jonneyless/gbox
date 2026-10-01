@@ -90,18 +90,38 @@ func IsOtherLanguageChar(r rune) bool {
 	if unicode.IsLetter(r) && (r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
 		return false
 	}
-	// 中日文
-	if unicode.Is(unicode.Han, r) ||
-		unicode.Is(unicode.Hiragana, r) ||
-		unicode.Is(unicode.Katakana, r) ||
-		unicode.Is(unicode.Ideographic, r) {
+	// 英文标点（ASCII 可打印符号，不含字母数字，不含空格）
+	if r >= 0x21 && r <= 0x7e && !unicode.IsLetter(r) && !unicode.IsDigit(r) {
+		return false
+	}
+	// 中文（基本块）
+	if r >= 0x4e00 && r <= 0x9fff {
+		return false
+	}
+	// 中文/日文标点：CJK 符号和标点
+	if r >= 0x3000 && r <= 0x303f {
+		return false
+	}
+	// 中文标点：全角 ASCII 变体
+	if r >= 0xff00 && r <= 0xffef {
+		return false
+	}
+	// 日文：平假名
+	if r >= 0x3040 && r <= 0x309f {
+		return false
+	}
+	// 日文：片假名
+	if r >= 0x30a0 && r <= 0x30ff {
+		return false
+	}
+	// 日文：片假名语音扩展
+	if r >= 0x31f0 && r <= 0x31ff {
 		return false
 	}
 	// Emoji
 	if IsEmoji(r) {
 		return false
 	}
-	// 其他语言（韩文、阿拉伯文等）
 	return true
 }
 
