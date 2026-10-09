@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"go.uber.org/zap"
 )
@@ -83,6 +84,24 @@ func (a *AWS) Upload(ctx context.Context, key string, file *bytes.Reader, conten
 		Key:         aws.String(key),
 		Body:        file,
 		ContentType: aws.String(contentType),
+	})
+
+	if err != nil {
+		a.log.Warnw("Failed to upload:", "error", err)
+	}
+
+	return result, err
+}
+
+func (a *AWS) UploadWithACL(ctx context.Context, key string, file *bytes.Reader, contentType string) (*transfermanager.UploadObjectOutput, error) {
+	client := a.TransferManager()
+
+	result, err := client.UploadObject(ctx, &transfermanager.UploadObjectInput{
+		Bucket:      aws.String(a.conf.Bucket),
+		Key:         aws.String(key),
+		Body:        file,
+		ContentType: aws.String(contentType),
+		ACL:         types.ObjectCannedACLPublicRead,
 	})
 
 	if err != nil {
