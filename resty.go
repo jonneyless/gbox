@@ -14,6 +14,7 @@ type RestyConfig struct {
 	BaseApi string
 	Timeout time.Duration
 	Headers map[string]string
+	Proxy   string
 	Debug   bool
 	Logger  *zap.SugaredLogger
 }
@@ -24,6 +25,9 @@ func NewRestyClient(cfg *RestyConfig) *resty.Client {
 	// 基础配置
 	client.SetBaseURL(cfg.BaseApi)
 	client.SetTimeout(cfg.Timeout)
+	if cfg.Proxy != "" {
+		client.SetProxy(cfg.Proxy)
+	}
 
 	client.SetHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:42.0) Gecko/20100101 Firefox/42.0")
 	client.SetHeader("Content-Type", "application/json")
